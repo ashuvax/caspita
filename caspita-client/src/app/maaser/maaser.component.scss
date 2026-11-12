@@ -81,3 +81,8 @@
 }
 
 .import .import-toggle { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
+
+.import .import-scroll {
+  max-height: 300px; overflow-y: auto; border-radius: 8px; background: var(--surface); border: 1px solid var(--line);
+  .import-table { margin: 0; td { padding-block: 6px; } td.num { white-space: nowrap; } }
+}

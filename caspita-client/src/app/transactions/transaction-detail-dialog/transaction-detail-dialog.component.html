@@ -39,7 +39,7 @@
   <mat-menu #tagAllMenu="matMenu">
     <button mat-menu-item *ngFor="let t of tags" (click)="tagAll(t)"><span [class]="'tag-dot tag-' + t.color"></span>&nbsp; {{ t.name }}</button>
     <div class="tag-new" (click)="stop($event)" (keydown)="stop($event)">
-      <input [(ngModel)]="newTagName" placeholder="תגית חדשה..." (keydown.enter)="createTag(null)" aria-label="תגית חדשה" />
+      <input [(ngModel)]="newTagName" placeholder="תגית חדשה ו-Enter" (keydown.enter)="createTag(null)" aria-label="תגית חדשה" />
     </div>
   </mat-menu>
 </div>
@@ -134,7 +134,7 @@
           <mat-menu #tagMenu="matMenu">
             <button mat-menu-item *ngFor="let t of availableTags(txn)" (click)="addTag(txn, t)"><span [class]="'tag-dot tag-' + t.color"></span>&nbsp; {{ t.name }}</button>
             <div class="tag-new" (click)="stop($event)" (keydown)="stop($event)">
-              <input [(ngModel)]="newTagName" placeholder="תגית חדשה..." (keydown.enter)="createTag(txn)" aria-label="תגית חדשה" />
+              <input [(ngModel)]="newTagName" placeholder="תגית חדשה ו-Enter" (keydown.enter)="createTag(txn)" aria-label="תגית חדשה" />
             </div>
           </mat-menu>
         </div>

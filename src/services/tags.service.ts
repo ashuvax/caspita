@@ -2,7 +2,7 @@ import { Op } from 'sequelize';
 import { Tag, TransactionTag } from '../models/tag.model';
 import { TransactionRecord } from '../models/transaction.model';
 import { monthOf } from '../utils/dates';
-import { round2 } from '../utils/text';
+import { merchantName, round2 } from '../utils/text';
 import { type TransactionDto } from '../types/transaction.types';
 import { categoryPortions, transactionsService } from './transactions.service';
 
@@ -23,7 +23,7 @@ export interface TagDto {
 export interface TagDetail extends TagDto {
   byCategory: { categoryId: number | null; amount: number }[];
   byMonth: { month: string; amount: number }[];
-  transactions: TransactionDto[];
+  transactions: (TransactionDto & { merchant: string })[];
 }
 
 export class TagError extends Error {}
@@ -73,7 +73,7 @@ async function detail(id: number): Promise<TagDetail | null> {
     lastDate: dates[dates.length - 1] ?? null,
     byCategory: [...cats.entries()].map(([categoryId, amount]) => ({ categoryId, amount: round2(amount) })).filter((c) => Math.abs(c.amount) > 0.005).sort((a, b) => b.amount - a.amount),
     byMonth: [...months.entries()].map(([month, amount]) => ({ month, amount: round2(amount) })).sort((a, b) => a.month.localeCompare(b.month)),
-    transactions,
+    transactions: transactions.map((t) => ({ ...t, merchant: merchantName(t.description, t.memo) })),
   };
 }
 

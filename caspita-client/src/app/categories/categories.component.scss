@@ -70,14 +70,17 @@
 .arrow { color: var(--muted); font-size: 18px; width: 18px; height: 18px; }
 .rule-editor {
   flex-basis: 100%;
-  margin-top: 8px; padding: 12px; border-radius: var(--radius-sm); background: var(--paper);
-  .sentence { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  margin-top: 8px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--paper);
+  display: flex; flex-direction: column; gap: 8px;
+  .rule-line { display: flex; align-items: flex-start; gap: 12px; }
+  .lead { width: 22px; flex-shrink: 0; padding-top: 7px; font-weight: 700; color: var(--pine); font-size: 14px; }
+  .conds { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .word { font-size: 14px; color: var(--ink-2); white-space: nowrap; }
-  .f-text { width: 170px; }
-  .f-num { width: 84px; }
-  .f-sel { width: 150px; }
-  .f-acc { width: 190px; }
-  .f-cat { width: 180px; }
-  .preview { margin: 10px 0 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
-  .rule-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .f-text { width: 150px; }
+  .f-num { width: 76px; }
+  .f-sel { width: 140px; }
+  .f-acc { width: 170px; }
+  .f-cat { width: 220px; }
+  .preview { margin: 2px 0 0 0; padding-inline-start: 34px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .rule-actions { display: flex; gap: 8px; }
 }

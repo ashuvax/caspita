@@ -29,6 +29,8 @@ export interface Loan {
   autoMatch: boolean;
   expectedMonthly: number | null;
   expectedDay: number | null;
+  /** כמה היה אמור להגיע עד היום לפי ההחזר החודשי ולא נרשם */
+  behind: number;
   entries: LoanEntry[];
 }
 

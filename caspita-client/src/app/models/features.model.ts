@@ -156,7 +156,7 @@ export interface Tag {
 export interface TagDetail extends Tag {
   byCategory: { categoryId: number | null; amount: number }[];
   byMonth: { month: string; amount: number }[];
-  transactions: Transaction[];
+  transactions: (Transaction & { merchant: string })[];
 }
 
 // ---------- כללי סיווג ----------

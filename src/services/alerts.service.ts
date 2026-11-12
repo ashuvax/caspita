@@ -4,7 +4,7 @@ import { Account } from '../models/account.model';
 import { Loan } from '../models/loan.model';
 import { Setting } from '../models/setting.model';
 import { BankConfig } from '../models/bank-config.model';
-import { addDays, addMonths, currentMonth, dateInMonth, diffDays, monthOf, monthsBetween, today } from '../utils/dates';
+import { addDays, addMonths, currentMonth, diffDays, monthOf, today } from '../utils/dates';
 import { descriptionKey, median, merchantName, round2 } from '../utils/text';
 import { transactionsService } from './transactions.service';
 import { installmentsService } from './installments.service';
@@ -163,41 +163,25 @@ async function installmentAlerts(): Promise<AlertDto[]> {
   return out;
 }
 
-/** כמה ימים אחרי היום בחודש ההחזר נחשב כמאחר */
-const LOAN_GRACE_DAYS = 7;
-
 /** הלוואות שנתתי עם החזר חודשי צפוי: עד היום היה אמור להגיע יותר ממה שנרשם */
 async function loanAlerts(): Promise<AlertDto[]> {
   const loans = await loansService.list('given');
-  const now = today();
-  const out: AlertDto[] = [];
-  for (const l of loans) {
-    if (!l.expectedMonthly || l.closed || l.status === 'repaid') continue;
-    const day = l.expectedDay ?? 1;
-    const start = l.startDate ?? [...l.entries].sort((a, b) => a.date.localeCompare(b.date))[0]?.date ?? null;
-    if (!start) continue;
-    const dues = monthsBetween(monthOf(start), currentMonth())
-      .map((m) => dateInMonth(m, day))
-      .filter((d) => d > start && diffDays(now, d) >= LOAN_GRACE_DAYS);
-    if (!dues.length) continue;
-    const expected = Math.min(l.amount, dues.length * l.expectedMonthly);
-    const paid = l.paid;
-    const missing = round2(expected - paid);
-    if (missing < Math.min(l.expectedMonthly * 0.5, l.remaining) || missing < 1) continue;
-    const last = dues[dues.length - 1];
-    out.push({
-      key: `loan-late:${l.id}:${monthOf(last)}`,
-      kind: 'loan_late',
-      tone: 'bad',
+  return loans
+    .filter((l) => l.behind > 0 && l.expectedMonthly && l.lastDueDate)
+    .map((l) => ({
+      key: `loan-late:${l.id}:${monthOf(l.lastDueDate!)}`,
+      kind: 'loan_late' as const,
+      tone: 'bad' as const,
       title: `${l.counterparty} — לא נרשם החזר`,
-      text: paid > 0
-        ? `לפי ${fmt(l.expectedMonthly)} ₪ בחודש היו אמורים להגיע ${fmt(expected)} ₪, ונרשמו ${fmt(paid)} — חסרים ${fmt(missing)} ₪`
-        : `ההחזר של ${fmt(l.expectedMonthly)} ₪ היה אמור להגיע ב-${day} לחודש, ועוד לא נרשם`,
+      text:
+        l.behind < l.expectedMonthly! * 1.5 && l.paid > 0
+          ? `חסרים ${fmt(l.behind)} ₪ לפי החזר של ${fmt(l.expectedMonthly!)} ₪ בחודש`
+          : l.paid > 0
+            ? `לפי ${fmt(l.expectedMonthly!)} ₪ בחודש, חסרים ${fmt(l.behind)} ₪ (נרשמו ${fmt(l.paid)} ₪)`
+            : `ההחזר של ${fmt(l.expectedMonthly!)} ₪ היה אמור להגיע ב-${l.expectedDay ?? 1} לחודש, ועוד לא נרשם`,
       link: '/loans/given',
-      date: last,
-    });
-  }
-  return out;
+      date: l.lastDueDate!,
+    }));
 }
 
 /** עמלות בנק / כרטיס */

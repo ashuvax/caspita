@@ -3,7 +3,7 @@ import { Loan, LoanPayment, type LoanDirection } from '../models/loan.model';
 import { TransactionRecord } from '../models/transaction.model';
 import { Account } from '../models/account.model';
 import { RecurringItem } from '../models/recurring-item.model';
-import { addDays, diffDays, monthOf, today } from '../utils/dates';
+import { addDays, currentMonth, dateInMonth, diffDays, monthOf, monthsBetween, today } from '../utils/dates';
 import { descriptionKey, median, merchantName, normalizeText, round2 } from '../utils/text';
 
 export type LoanStatus = 'open' | 'overdue' | 'repaid';
@@ -43,7 +43,30 @@ export interface LoanDto {
   /** הלוואה שנתתי: החזר חודשי צפוי ויום בחודש — להתראה כשלא נרשם */
   expectedMonthly: number | null;
   expectedDay: number | null;
+  /** כמה היה אמור להגיע עד היום לפי ההחזר החודשי ולא נרשם (0 = בזמן) */
+  behind: number;
+  /** מועד ההחזר האחרון שעבר (לפי היום בחודש) */
+  lastDueDate: string | null;
   entries: LoanEntry[];
+}
+
+/** כמה ימים אחרי היום בחודש ההחזר נחשב כמאחר */
+export const LOAN_GRACE_DAYS = 7;
+
+/** הלוואה שנתתי עם החזר חודשי צפוי: כמה היה אמור להגיע מתחילת ההלוואה ועד היום, ומה חסר */
+function scheduleStatus(l: Loan, paid: number, remaining: number, entries: LoanEntry[]): { behind: number; lastDueDate: string | null } {
+  if (l.direction !== 'given' || !l.expectedMonthly || l.closed || remaining <= 0.5) return { behind: 0, lastDueDate: null };
+  const start = l.startDate ?? [...entries].sort((a, b) => a.date.localeCompare(b.date))[0]?.date ?? null;
+  if (!start) return { behind: 0, lastDueDate: null };
+  const now = today();
+  const dues = monthsBetween(monthOf(start), currentMonth())
+    .map((m) => dateInMonth(m, l.expectedDay ?? 1))
+    .filter((d) => d > start && diffDays(now, d) >= LOAN_GRACE_DAYS);
+  if (!dues.length) return { behind: 0, lastDueDate: null };
+  const expected = Math.min(l.amount, dues.length * l.expectedMonthly);
+  const missing = round2(expected - paid);
+  const behind = missing >= Math.min(l.expectedMonthly * 0.5, remaining) && missing >= 1 ? missing : 0;
+  return { behind, lastDueDate: dues[dues.length - 1] };
 }
 
 export interface LoanInput {
@@ -166,6 +189,7 @@ async function toDtos(loans: Loan[]): Promise<LoanDto[]> {
       autoMatch: !!l.matchKey,
       expectedMonthly: l.expectedMonthly ?? null,
       expectedDay: l.expectedDay ?? null,
+      ...scheduleStatus(l, paid, remaining, entries),
       entries,
     };
   });

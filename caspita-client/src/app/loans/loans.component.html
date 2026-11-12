@@ -86,6 +86,7 @@
         </span>
       </div>
       <span class="lh-status">{{ statusText(l) }}</span>
+      <span class="chip chip-danger behind" *ngIf="l.behind">חסר החזר: {{ l.behind | number: '1.0-0' }} ₪</span>
       <div class="lh-remaining">
         <span class="num">{{ l.remaining | number: '1.0-0' }}</span>
         <small>{{ l.status === 'repaid' ? '' : 'נשאר' }}</small>

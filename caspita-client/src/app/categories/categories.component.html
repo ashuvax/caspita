@@ -47,37 +47,47 @@
 
   <ng-template #ruleEditor>
     <div class="rule-editor">
-      <div class="sentence">
-        <span class="word">אם התיאור מכיל</span>
-        <mat-form-field appearance="outline" class="field-compact f-text">
-          <input matInput [(ngModel)]="rule.text" (ngModelChange)="ruleChanged()" placeholder="למשל: ברייער" />
-        </mat-form-field>
-        <span class="word">והסכום</span>
-        <mat-form-field appearance="outline" class="field-compact f-num">
-          <input matInput type="number" min="0" [(ngModel)]="rule.minAmount" (ngModelChange)="ruleChanged()" placeholder="מ-" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="field-compact f-num">
-          <input matInput type="number" min="0" [(ngModel)]="rule.maxAmount" (ngModelChange)="ruleChanged()" placeholder="עד" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="field-compact f-sel">
-          <mat-select [(ngModel)]="rule.direction" (ngModelChange)="ruleChanged()">
-            <mat-option value="expense">הוצאה</mat-option>
-            <mat-option value="income">הכנסה</mat-option>
-            <mat-option [value]="null">הוצאה או הכנסה</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="field-compact f-acc">
-          <mat-select [(ngModel)]="rule.accountId" (ngModelChange)="ruleChanged()" placeholder="מכל חשבון">
-            <mat-option [value]="null">מכל חשבון</mat-option>
-            <mat-option *ngFor="let a of accounts" [value]="a.id">{{ accountName(a.id) }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-icon class="arrow">arrow_back</mat-icon>
-        <mat-form-field appearance="outline" class="field-compact f-cat">
-          <mat-select [(ngModel)]="rule.categoryId" placeholder="קטגוריה">
-            <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
-          </mat-select>
-        </mat-form-field>
+      <div class="rule-line">
+        <span class="lead">אם</span>
+        <div class="conds">
+          <span class="word">התיאור מכיל</span>
+          <mat-form-field appearance="outline" class="field-compact f-text">
+            <input matInput [(ngModel)]="rule.text" (ngModelChange)="ruleChanged()" placeholder="למשל: ברייער" aria-label="טקסט בתיאור" />
+          </mat-form-field>
+          <span class="word">סכום מ-</span>
+          <mat-form-field appearance="outline" class="field-compact f-num">
+            <input matInput type="number" min="0" [(ngModel)]="rule.minAmount" (ngModelChange)="ruleChanged()" placeholder="—" aria-label="סכום מינימלי" />
+          </mat-form-field>
+          <span class="word">עד</span>
+          <mat-form-field appearance="outline" class="field-compact f-num">
+            <input matInput type="number" min="0" [(ngModel)]="rule.maxAmount" (ngModelChange)="ruleChanged()" placeholder="—" aria-label="סכום מקסימלי" />
+          </mat-form-field>
+          <span class="word">₪</span>
+          <mat-form-field appearance="outline" class="field-compact f-sel">
+            <mat-select [(ngModel)]="rule.direction" (ngModelChange)="ruleChanged()" aria-label="סוג">
+              <mat-option value="expense">הוצאה</mat-option>
+              <mat-option value="income">הכנסה</mat-option>
+              <mat-option [value]="null">הוצאה או הכנסה</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="field-compact f-acc">
+            <mat-select [(ngModel)]="rule.accountId" (ngModelChange)="ruleChanged()" placeholder="מכל חשבון" aria-label="חשבון">
+              <mat-option [value]="null">מכל חשבון</mat-option>
+              <mat-option *ngFor="let a of accounts" [value]="a.id">{{ accountName(a.id) }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="lead">אז</span>
+        <div class="conds">
+          <span class="word">קטגוריה</span>
+          <mat-form-field appearance="outline" class="field-compact f-cat">
+            <mat-select [(ngModel)]="rule.categoryId" placeholder="בחר קטגוריה" aria-label="קטגוריה">
+              <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
       </div>
       <p class="preview" *ngIf="hasCondition()">
         <ng-container *ngIf="preview && preview.count">

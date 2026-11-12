@@ -132,22 +132,23 @@
     <div class="import" *ngIf="importPreview as ip">
       <p class="import-title">
         <mat-icon>description</mat-icon>
-        דוח תרומות {{ ip.year }}: {{ ip.entries.length }} תרומות<ng-container *ngIf="ip.reportTotal !== null">, סה"כ {{ ip.reportTotal | number: '1.0-0' }} ₪</ng-container>
+        דוח תרומות {{ ip.year }}: {{ ip.entries.length }} תרומות
       </p>
       <div class="import-groups">
         <div class="ig ok">
-          <strong>{{ ip.counts.matched }}</strong> נמצאה עסקה <span class="num">({{ ip.totals.matched | number: '1.0-0' }} ₪)</span>
+          <strong>{{ ip.counts.matched }}</strong> נמצאו בעסקאות <span class="num">({{ ip.totals.matched | number: '1.0-0' }} ₪)</span>
           <button class="link-btn" *ngIf="ip.counts.matched" (click)="showMatched = !showMatched">{{ showMatched ? 'הסתר' : 'הצג' }}</button>
         </div>
         <div class="ig cash" *ngIf="ip.counts.cash_new">
           <strong>{{ ip.counts.cash_new }}</strong> תרומות במזומן — ייווצרו <span class="num">({{ ip.totals.cash_new | number: '1.0-0' }} ₪)</span>
         </div>
         <div class="ig bad" *ngIf="ip.counts.unmatched">
-          <strong>{{ ip.counts.unmatched }}</strong> לא נמצאה עסקה <span class="num">({{ ip.totals.unmatched | number: '1.0-0' }} ₪)</span>
+          <strong>{{ ip.counts.unmatched }}</strong> בלי עסקה <span class="num">({{ ip.totals.unmatched | number: '1.0-0' }} ₪)</span>
         </div>
       </div>
 
-      <table class="data-table import-table" *ngIf="showMatched || ip.counts.cash_new || ip.counts.unmatched">
+      <div class="import-scroll" *ngIf="showMatched || ip.counts.cash_new || ip.counts.unmatched">
+      <table class="data-table import-table">
         <tbody>
           <ng-container *ngIf="showMatched">
             <tr *ngFor="let e of importOf('matched')">
@@ -171,6 +172,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
       <p class="import-note" *ngIf="ip.counts.unmatched">תרומות בלי עסקה לא יסומנו. אם החיוב עוד לא סונכרן — סנכרן וייבא שוב, זה לא יוצר כפילויות.</p>
 
       <label class="import-toggle"><mat-slide-toggle [(ngModel)]="importMarkPayees"></mat-slide-toggle><span>לסמן את העמותות האלה כמזכות גם בתרומות הבאות (גם לפני שהקבלה נקלטת)</span></label>
