@@ -219,3 +219,15 @@
   input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; color: var(--ink); }
 }
 .list-head { flex-wrap: wrap; }
+
+.cat-bar-budget {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 3px;
+  margin-right: -1.5px;
+  border-radius: 2px;
+  background: var(--gold);
+}
+.cat-avg.budget { color: var(--leaf-dark); &.over { color: var(--brick); font-weight: 600; } }
+.inline-link { color: var(--pine); font-weight: 600; margin-inline-start: 4px; }

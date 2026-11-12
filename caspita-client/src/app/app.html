@@ -3,13 +3,40 @@
     <div class="sidebar-logo">
       <span class="logo-mark" aria-hidden="true">₪</span>
       <span class="logo-text">כספיטה</span>
+      <ng-container *ngIf="features.alerts$ | async as alerts">
+        <button
+          class="bell-btn"
+          [matMenuTriggerFor]="alertsMenu"
+          [class.has-alerts]="alerts.length"
+          [attr.aria-label]="alerts.length ? alerts.length + ' עדכונים' : 'אין עדכונים'"
+          matTooltip="עדכונים"
+        >
+          <mat-icon>notifications</mat-icon>
+          <span class="bell-count" *ngIf="alerts.length">{{ alerts.length }}</span>
+        </button>
+        <mat-menu #alertsMenu="matMenu" class="alerts-menu" xPosition="before">
+          <div class="alerts-head" (click)="$event.stopPropagation()">עדכונים</div>
+          <p class="alerts-empty" *ngIf="!alerts.length" (click)="$event.stopPropagation()">אין עדכונים חדשים</p>
+          <button mat-menu-item class="alert-item" *ngFor="let a of alerts" [class]="'tone-' + a.tone" (click)="openAlert(a)">
+            <mat-icon class="alert-icon">{{ alertIcon(a) }}</mat-icon>
+            <span class="alert-body">
+              <strong>{{ a.title }}</strong>
+              <span>{{ a.text }}</span>
+            </span>
+            <span class="alert-close" role="button" aria-label="הסתר" matTooltip="הסתר" (click)="dismiss(a, $event)"><mat-icon>close</mat-icon></span>
+          </button>
+        </mat-menu>
+      </ng-container>
     </div>
 
     <nav class="sidebar-nav">
-      <a *ngFor="let item of navItems" class="nav-item" [routerLink]="item.path" routerLinkActive="active">
-        <mat-icon>{{ item.icon }}</mat-icon>
-        <span class="nav-label">{{ item.label }}</span>
-      </a>
+      <div class="nav-group" *ngFor="let g of navGroups">
+        <span class="nav-group-title" *ngIf="g.title">{{ g.title }}</span>
+        <a *ngFor="let item of g.items" class="nav-item" [routerLink]="item.path" routerLinkActive="active">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      </div>
     </nav>
 
     <div class="sidebar-footer">

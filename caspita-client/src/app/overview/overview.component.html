@@ -54,6 +54,16 @@
         <span class="att-text">{{ a.text }}</span>
         <span class="att-action">{{ a.action }}</span>
       </a>
+      <ng-container *ngIf="features.alerts$ | async as alerts">
+        <div class="updates" *ngIf="alerts.length">
+          <span class="updates-title">עדכונים</span>
+          <a class="att" *ngFor="let a of alerts" [routerLink]="a.link" [class]="'att tone-' + (a.tone === 'good' ? 'good' : a.tone === 'bad' ? 'warn' : 'info')">
+            <mat-icon>{{ a.tone === 'good' ? 'trending_down' : a.kind === 'budget' ? 'speed' : a.kind === 'price_up' ? 'trending_up' : 'schedule' }}</mat-icon>
+            <span class="att-text"><strong>{{ a.title }}</strong> · {{ a.text }}</span>
+            <span class="att-action">לפרטים</span>
+          </a>
+        </div>
+      </ng-container>
     </section>
 
     <!-- החודש -->

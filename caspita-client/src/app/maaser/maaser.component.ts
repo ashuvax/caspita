@@ -5,6 +5,8 @@ import { takeUntil } from 'rxjs/operators';
 import { FinanceService } from '../services/finance.service';
 import { SyncService } from '../services/sync.service';
 import { MaaserRule, MaaserRuleKind, MaaserSettings, MaaserSummary } from '../models/finance.model';
+import { FeaturesService } from '../services/features.service';
+import { Section46Payee, Section46Summary } from '../models/features.model';
 
 @Component({
   selector: 'app-maaser',
@@ -21,17 +23,22 @@ export class MaaserComponent implements OnInit, OnDestroy {
   newDonation = '';
   newExclude = '';
   settingsForm: MaaserSettings = { percent: 10, startMonth: null, openingBalance: 0 };
+  s46: Section46Summary | null = null;
+  s46Year = new Date().getFullYear();
+  readonly s46Years = [0, 1, 2].map((i) => new Date().getFullYear() - i);
 
   private destroy$ = new Subject<void>();
 
   constructor(
     private finance: FinanceService,
+    private features: FeaturesService,
     private sync: SyncService,
     private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
     this.load();
+    this.loadS46();
     this.sync.synced$.pipe(takeUntil(this.destroy$)).subscribe(() => this.load());
   }
 
@@ -55,6 +62,20 @@ export class MaaserComponent implements OnInit, OnDestroy {
           this.snackBar.open('שגיאה בטעינת המעשרות', 'סגור', { duration: 4000 });
         },
       });
+  }
+
+  loadS46(): void {
+    this.features
+      .section46(this.s46Year)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: (s) => (this.s46 = s), error: () => undefined });
+  }
+
+  toggleS46(p: Section46Payee, eligible: boolean): void {
+    this.features.setSection46Payee(p.name, eligible).subscribe({
+      next: () => this.loadS46(),
+      error: () => this.snackBar.open('שגיאה בשמירה', 'סגור', { duration: 4000 }),
+    });
   }
 
   rulesOf(kind: MaaserRuleKind): MaaserRule[] {

@@ -3,6 +3,8 @@ import { type Transaction, type TransactionsAccount } from 'israeli-bank-scraper
 import { BankConfig } from '../models/bank-config.model';
 import { Account } from '../models/account.model';
 import { TransactionRecord, type MaaserOverride } from '../models/transaction.model';
+import { TransactionSplit } from '../models/split.model';
+import { installmentsService } from './installments.service';
 import { companyKind } from '../config/companies.config';
 import { addDays, localDateToDate, toLocalDate, today } from '../utils/dates';
 import { normalizeText, round2 } from '../utils/text';
@@ -126,6 +128,16 @@ async function saveAccount(config: BankConfig, scraped: TransactionsAccount, fro
   for (const p of oldPending) if (p.loanId) carriedLoans.set(overrideKey(p), p.loanId);
   const carriedSavings = new Map<string, number>();
   for (const p of oldPending) if (p.savingsId) carriedSavings.set(overrideKey(p), p.savingsId);
+  const carriedCategories = new Map<string, number>();
+  for (const p of oldPending) if (p.categoryOverrideId) carriedCategories.set(overrideKey(p), p.categoryOverrideId);
+  // פיצולים של עסקה ממתינה עוברים לעסקה החדשה
+  const oldSplits = oldPending.length ? await TransactionSplit.findAll({ where: { transactionId: { [Op.in]: oldPending.map((p) => p.id) } } }) : [];
+  const pendingKeyById = new Map(oldPending.map((p) => [p.id, overrideKey(p)]));
+  const carriedSplits = new Map<string, TransactionSplit[]>();
+  for (const s of oldSplits) {
+    const key = pendingKeyById.get(s.transactionId)!;
+    carriedSplits.set(key, [...(carriedSplits.get(key) ?? []), s]);
+  }
   if (oldPending.length) await TransactionRecord.destroy({ where: { id: { [Op.in]: oldPending.map((p) => p.id) } } });
 
   const existing = await TransactionRecord.findAll({
@@ -139,10 +151,21 @@ async function saveAccount(config: BankConfig, scraped: TransactionsAccount, fro
     if (prev) {
       await prev.update({ processedDate: r.processedDate, memo: r.memo, category: r.category, status: r.status });
     } else {
-      await TransactionRecord.create({ ...r, maaserOverride: carriedOverrides.get(overrideKey(r)) ?? null, loanId: carriedLoans.get(overrideKey(r)) ?? null, savingsId: carriedSavings.get(overrideKey(r)) ?? null });
+      const key = overrideKey(r);
+      const created = await TransactionRecord.create({
+        ...r,
+        maaserOverride: carriedOverrides.get(key) ?? null,
+        loanId: carriedLoans.get(key) ?? null,
+        savingsId: carriedSavings.get(key) ?? null,
+        categoryOverrideId: carriedCategories.get(key) ?? null,
+      });
+      for (const s of carriedSplits.get(key) ?? []) await s.update({ transactionId: created.id });
+      carriedSplits.delete(key);
       added++;
     }
   }
+  // פיצולים של עסקה ממתינה שנעלמה — נמחקים
+  for (const list of carriedSplits.values()) for (const s of list) await s.destroy();
   return added;
 }
 
@@ -196,6 +219,7 @@ async function runSync(): Promise<SyncError[]> {
     // ספקים חדשים מקבלים קטגוריה אוטומטית (ספקים שכבר שויכו לא נוגעים בהם)
     await categoryAutoService.autoAssign();
     await loansService.autoLink();
+    await installmentsService.autoLink();
     await savingsService.autoLink();
   } finally {
     status.running = false;

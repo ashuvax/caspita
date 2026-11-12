@@ -23,3 +23,40 @@
 }
 
 .add-btn:disabled { opacity: .5; cursor: default; transform: none; }
+
+.s46-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.year-select { width: 110px; flex-shrink: 0; }
+
+.s46-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 14px;
+}
+.s46-stat {
+  flex: 1;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  .label { font-size: 13px; color: var(--muted); }
+  strong { font-family: var(--font-num); font-size: 20px; font-weight: 500; color: var(--ink); }
+  &.main { background: var(--leaf-tint); strong { color: var(--leaf-dark); font-size: 24px; } }
+}
+
+.s46-list { display: flex; flex-direction: column; }
+.s46-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  &:first-child { border-top: none; }
+  .s46-name { flex: 1; font-weight: 600; color: var(--ink); }
+  .s46-amount { font-family: var(--font-num); min-width: 80px; text-align: left; color: var(--ink); }
+}
+.s46-howto { margin: 12px 0 0; font-size: 13px; color: var(--muted); max-width: 80ch; }

@@ -7,6 +7,7 @@ import { TransactionsService } from '../services/transactions.service';
 import { BanksService } from '../services/banks.service';
 import { SyncService } from '../services/sync.service';
 import { LoansService } from '../services/loans.service';
+import { FeaturesService } from '../services/features.service';
 import { InvestmentsService } from '../services/investments.service';
 import { NetWorth } from '../models/investment.model';
 import { Loan } from '../models/loan.model';
@@ -54,6 +55,7 @@ export class OverviewComponent implements OnInit, OnDestroy {
     private transactions: TransactionsService,
     private banksService: BanksService,
     private loans: LoansService,
+    public features: FeaturesService,
     private investments: InvestmentsService,
     public sync: SyncService,
     private snackBar: MatSnackBar

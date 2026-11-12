@@ -72,7 +72,7 @@ export class FinanceService {
     return this.http.post<Category[]>('/categories', { name, icon });
   }
 
-  updateCategory(id: number, data: { name?: string; icon?: string }): Observable<Category[]> {
+  updateCategory(id: number, data: { name?: string; icon?: string; monthlyBudget?: number | null }): Observable<Category[]> {
     return this.http.put<Category[]>(`/categories/${id}`, data);
   }
 

@@ -54,6 +54,8 @@ export interface TransactionDto {
   categoryId: number | null;
   /** האם נקבעה לעסקה הזו קטגוריה שונה מהספק */
   categoryOverridden: boolean;
+  /** חלקים מהעסקה ששייכים לקטגוריות אחרות (סכומים חיוביים). השארית בקטגוריה של העסקה */
+  splits: { categoryId: number; amount: number }[];
   /** הקטגוריה שחברת האשראי נתנה (רמז) */
   sourceCategory: string | null;
 }
@@ -68,7 +70,7 @@ export interface GroupedMerchant {
   transactions: TransactionDto[];
 }
 
-export type InsightKind = 'deficit' | 'surplus' | 'category_up' | 'category_down' | 'new_merchant' | 'largest' | 'pace';
+export type InsightKind = 'deficit' | 'surplus' | 'category_up' | 'category_down' | 'new_merchant' | 'largest' | 'pace' | 'budget';
 
 export interface Insight {
   kind: InsightKind;
@@ -108,5 +110,5 @@ export interface GroupedResult {
   daysElapsed: number;
   daysInMonth: number;
   /** הוצאות נטו לפי קטגוריה (null = ללא קטגוריה) */
-  byCategory: { categoryId: number | null; expenses: number; count: number; prevExpenses: number; avgExpenses: number }[];
+  byCategory: { categoryId: number | null; expenses: number; count: number; prevExpenses: number; avgExpenses: number; budget: number | null }[];
 }

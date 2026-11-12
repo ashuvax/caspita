@@ -75,6 +75,38 @@
             </mat-select>
           </mat-form-field>
           <span class="chip chip-info" *ngIf="txn.categoryOverridden">קטגוריה שונה לעסקה זו</span>
+          <button class="ghost-btn split-btn" *ngIf="isExpense(txn) && splitEditing !== txn.id" (click)="startSplit(txn)" matTooltip="חלק מהסכום שייך לקטגוריה אחרת">
+            <mat-icon>call_split</mat-icon>{{ txn.splits.length ? 'עריכת פיצול' : 'פיצול' }}
+          </button>
+        </div>
+        <div class="split-summary" *ngIf="txn.splits.length && splitEditing !== txn.id">
+          <mat-icon>call_split</mat-icon>
+          <span *ngFor="let s of txn.splits">{{ categoryName(s.categoryId) }} {{ s.amount | number: '1.0-2' }} ₪ · </span>
+          <span>השאר ({{ splitRest(txn) | number: '1.0-2' }} ₪) ב{{ categoryName(txn.categoryId) }}</span>
+        </div>
+        <div class="split-editor" *ngIf="splitEditing === txn.id">
+          <p class="split-hint">כמה מתוך {{ absAmount(txn) | number: '1.0-2' }} ₪ שייך לקטגוריה אחרת? השאר נשאר ב{{ categoryName(txn.categoryId) }}.</p>
+          <div class="split-row" *ngFor="let part of draft; let i = index">
+            <mat-form-field appearance="outline" class="field-compact split-cat">
+              <mat-select [(ngModel)]="part.categoryId" placeholder="קטגוריה">
+                <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="field-compact split-amount">
+              <input matInput type="number" min="0" [(ngModel)]="part.amount" placeholder="₪" />
+            </mat-form-field>
+            <button class="icon-btn" (click)="removePart(i)" matTooltip="הסר"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="split-actions">
+            <button class="ghost-btn" (click)="addPart()"><mat-icon>add</mat-icon>עוד חלק</button>
+            <span class="split-rest" [class.bad]="draftRest(txn) < 0">
+              {{ draftRest(txn) < 0 ? 'יותר מסכום העסקה' : 'נשאר ב' + categoryName(txn.categoryId) + ': ' + (draftRest(txn) | number: '1.0-2') + ' ₪' }}
+            </span>
+            <span class="spacer"></span>
+            <button class="ghost-btn" *ngIf="txn.splits.length" (click)="saveSplit(txn, true)">ביטול הפיצול</button>
+            <button class="ghost-btn" (click)="splitEditing = null">סגור</button>
+            <button class="add-btn" (click)="saveSplit(txn)" [disabled]="!draftValid(txn)">שמירה</button>
+          </div>
         </div>
         <div class="maaser-line" *ngIf="txn.isCardPayment">
           <span class="chip chip-muted"><mat-icon>credit_card</mat-icon>תשלום כרטיס אשראי — לא נספר. כל הרכישות שבו מופיעות לפי ספק</span>

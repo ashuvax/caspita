@@ -1,0 +1,63 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>שאל את כספיטה</h1>
+    <p class="header-sub">שאלה בשפה חופשית על הכסף שלך — התשובה מגיעה מ-{{ engineName(engine) }} שמותקן במחשב, בלי עלות נוספת</p>
+  </div>
+  <div class="header-controls">
+    <mat-button-toggle-group *ngIf="bothEngines()" [(ngModel)]="engine" hideSingleSelectionIndicator aria-label="מנוע">
+      <mat-button-toggle value="claude">Claude</mat-button-toggle>
+      <mat-button-toggle value="codex">Codex</mat-button-toggle>
+    </mat-button-toggle-group>
+    <button class="ghost-btn" *ngIf="messages.length" (click)="reset()"><mat-icon>add_comment</mat-icon>שיחה חדשה</button>
+  </div>
+</div>
+
+<div class="warning-banner" *ngIf="noEngine()">
+  <mat-icon>info</mat-icon>
+  <span>לא נמצא Claude Code או Codex במחשב. אחרי שמתקינים אחד מהם ומתחברים אליו פעם אחת, השאלות כאן יעבדו.</span>
+</div>
+
+<section class="chat panel">
+  <div class="messages" #scroller>
+    <div class="intro" *ngIf="!messages.length">
+      <mat-icon class="intro-icon">forum</mat-icon>
+      <p>אפשר לשאול כל דבר על העסקאות, ההלוואות, החסכונות והמעשרות. למשל:</p>
+      <div class="suggestions">
+        <button class="suggestion" *ngFor="let s of suggestions" (click)="ask(s)" [disabled]="asking || noEngine()">{{ s }}</button>
+      </div>
+    </div>
+
+    <div class="msg" *ngFor="let m of messages" [class.user]="m.role === 'user'" [class.bot]="m.role === 'assistant'" [class.error]="m.error">
+      <div class="bubble">
+        <span *ngIf="m.role === 'user'">{{ m.text }}</span>
+        <div *ngIf="m.role === 'assistant'" class="answer" [innerHTML]="render(m.text)"></div>
+      </div>
+      <span class="meta" *ngIf="m.role === 'assistant' && !m.error && m.seconds !== undefined">{{ engineName(m.engine) }} · {{ m.seconds }} שניות</span>
+    </div>
+
+    <div class="msg bot" *ngIf="asking">
+      <div class="bubble thinking">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="thinking-text">בודק בנתונים...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <textarea
+      [(ngModel)]="question"
+      (keydown)="onKey($event)"
+      rows="1"
+      placeholder="למשל: כמה הוצאתי על ספרים השנה?"
+      aria-label="שאלה"
+      [disabled]="noEngine()"
+    ></textarea>
+    <button class="send-btn" (click)="ask()" [disabled]="!question.trim() || asking || noEngine()" aria-label="שליחה">
+      <mat-icon>send</mat-icon>
+    </button>
+  </div>
+</section>
+
+<p class="footnote">
+  העוזר רואה רק עותק לקריאה של הנתונים (בלי פרטי התחברות לבנקים) ולא יכול לשנות כלום. תשובה לוקחת בדרך כלל 10–30 שניות.
+</p>

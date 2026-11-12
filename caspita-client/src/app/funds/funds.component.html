@@ -1,0 +1,77 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>קופות</h1>
+    <p class="header-sub">מפרישים קצת כל חודש להוצאות הגדולות שידוע שיגיעו — וכשהן מגיעות, הכסף כבר מחכה</p>
+  </div>
+  <div class="header-controls">
+    <button class="add-btn" (click)="open()"><mat-icon>add</mat-icon>קופה חדשה</button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading">
+  <div class="empty-state" *ngIf="!funds.length">
+    <div class="empty-icon"><mat-icon>savings</mat-icon></div>
+    <p class="empty-title">עוד אין קופות</p>
+    <p class="empty-sub">
+      למשל: פסח עולה בערך 6,000 ₪? מפרישים 500 ₪ בחודש, וההוצאות בקטגוריה של החג יורדות מהקופה.
+      הכסף לא זז מהבנק — זו רק דרך לדעת כמה ממנו כבר "שמור".
+    </p>
+    <button class="add-btn" (click)="open()"><mat-icon>add</mat-icon>קופה ראשונה</button>
+  </div>
+
+  <section class="summary" *ngIf="funds.length">
+    <div class="sum-item">
+      <span class="sum-label">שמור בקופות</span>
+      <span class="sum-value"><span class="num">{{ total() | number: '1.0-0' }}</span> <small>₪</small></span>
+    </div>
+    <div class="sum-item">
+      <span class="sum-label">מפרישים כל חודש</span>
+      <span class="sum-value small"><span class="num">{{ monthlyTotal() | number: '1.0-0' }}</span> <small>₪</small></span>
+    </div>
+  </section>
+
+  <div class="fund-grid">
+    <button class="fund" *ngFor="let f of funds" (click)="open(f)">
+      <div class="fund-head">
+        <span class="fund-icon"><mat-icon>{{ f.icon }}</mat-icon></span>
+        <span class="fund-name">{{ f.name }}</span>
+        <span class="chip" [class.chip-warning]="f.onTrack === false" [class.chip-info]="f.onTrack" *ngIf="f.onTrack !== null">
+          {{ f.onTrack ? 'בזמן' : 'מאחור' }}
+        </span>
+      </div>
+
+      <div class="fund-balance" [class.neg]="f.balance < 0">
+        <span class="num">{{ f.balance | number: '1.0-0' }}</span> ₪
+        <span class="of" *ngIf="f.targetAmount">מתוך {{ f.targetAmount | number: '1.0-0' }}</span>
+      </div>
+
+      <span class="track" *ngIf="f.targetAmount"><span class="fill" [style.width.%]="progressPct(f)"></span></span>
+
+      <div class="fund-meta">
+        <span>{{ f.monthlyAmount | number: '1.0-0' }} ₪ בחודש</span>
+        <span *ngIf="f.targetDate">· עד {{ f.targetDate | date: 'dd/MM/yy' }}</span>
+        <span *ngIf="categoryName(f.categoryId) as c">· הוצאות "{{ c }}" יורדות מכאן</span>
+      </div>
+      <div class="fund-warn" *ngIf="f.onTrack === false && f.neededMonthly">
+        כדי להגיע בזמן צריך {{ f.neededMonthly | number: '1.0-0' }} ₪ בחודש
+      </div>
+      <div class="fund-warn" *ngIf="f.balance < 0">יצא יותר ממה שהופרש — {{ -f.balance | number: '1.0-0' }} ₪ חסר</div>
+
+      <div class="fund-recent" *ngIf="f.recent.length">
+        <span class="recent-title">ירד לאחרונה</span>
+        <span class="recent-row" *ngFor="let r of f.recent.slice(0, 3)">
+          <span>{{ r.name }}</span><span class="num">{{ r.amount | number: '1.0-0' }}</span>
+        </span>
+      </div>
+    </button>
+  </div>
+
+  <p class="footnote" *ngIf="funds.length">
+    הכסף לא מועבר לשום מקום — הקופה רק סופרת: כמה הופרש מאז שהתחלת, פחות מה שכבר יצא בקטגוריה שלה.
+  </p>
+</ng-container>

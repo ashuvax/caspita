@@ -15,6 +15,7 @@ export interface CategoryDto {
   name: string;
   icon: string;
   merchantCount: number;
+  monthlyBudget: number | null;
 }
 
 async function ensureDefaults(): Promise<void> {
@@ -29,7 +30,7 @@ async function list(): Promise<CategoryDto[]> {
   const [cats, maps] = await Promise.all([Category.findAll({ order: [['sortOrder', 'ASC'], ['name', 'ASC']] }), MerchantCategory.findAll()]);
   const counts = new Map<number, number>();
   for (const m of maps) counts.set(m.categoryId, (counts.get(m.categoryId) ?? 0) + 1);
-  return cats.map((c) => ({ id: c.id, name: c.name, icon: c.icon, merchantCount: counts.get(c.id) ?? 0 }));
+  return cats.map((c) => ({ id: c.id, name: c.name, icon: c.icon, merchantCount: counts.get(c.id) ?? 0, monthlyBudget: c.monthlyBudget ?? null }));
 }
 
 async function create(name: string, icon: string): Promise<Category> {
@@ -37,10 +38,14 @@ async function create(name: string, icon: string): Promise<Category> {
   return Category.create({ name: name.trim(), icon: icon || 'label', sortOrder: max + 1 });
 }
 
-async function update(id: number, data: { name?: string; icon?: string }): Promise<boolean> {
+async function update(id: number, data: { name?: string; icon?: string; monthlyBudget?: number | null }): Promise<boolean> {
   const cat = await Category.findByPk(id);
   if (!cat) return false;
-  await cat.update({ ...(data.name?.trim() ? { name: data.name.trim() } : {}), ...(data.icon ? { icon: data.icon } : {}) });
+  await cat.update({
+    ...(data.name?.trim() ? { name: data.name.trim() } : {}),
+    ...(data.icon ? { icon: data.icon } : {}),
+    ...(data.monthlyBudget !== undefined ? { monthlyBudget: data.monthlyBudget } : {}),
+  });
   return true;
 }
 

@@ -1,0 +1,78 @@
+.num { direction: ltr; unicode-bidi: isolate; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.summary {
+  display: flex;
+  align-items: flex-end;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  border-radius: var(--radius);
+  background: var(--pine);
+  color: #fff;
+
+  .sum-main { display: flex; flex-direction: column; gap: 2px; }
+  .sum-label, .months-label { font-size: 14px; color: #b9cec3; font-weight: 600; }
+  .sum-value { font-family: var(--font-num); font-size: 34px; font-weight: 500; small { font-size: 18px; color: #b9cec3; margin-inline-start: 4px; } }
+  .sum-sub { font-size: 13px; color: #9fbaab; }
+
+  .months { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 6px; }
+  .month-bars { display: flex; gap: 6px; height: 74px; align-items: stretch; }
+  .mb { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+  .mb-bar { flex: 1; width: 100%; max-width: 26px; display: flex; align-items: flex-end; }
+  .mb-fill { width: 100%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--gold-soft); }
+  .mb-month { font-size: 11px; color: #9fbaab; }
+}
+
+.plan {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  &:first-of-type { border-top: none; padding-top: 4px; }
+}
+
+.plan-main { display: flex; align-items: flex-start; gap: 16px; }
+.plan-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.plan-name { font-weight: 600; color: var(--ink); font-size: 15.5px; }
+.plan-sub { font-size: 13px; color: var(--muted); }
+.plan-loan { align-self: flex-start; margin-top: 4px; mat-icon { font-size: 15px; width: 15px; height: 15px; } }
+.plan-amount {
+  display: flex; flex-direction: column; align-items: flex-end;
+  strong { font-size: 17px; font-weight: 600; color: var(--ink); }
+  span { font-size: 12px; color: var(--muted); }
+}
+
+.plan-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+
+  .track { flex: 1; min-width: 120px; height: 8px; border-radius: 4px; background: var(--paper-2); overflow: hidden; }
+  .fill { display: block; height: 100%; border-radius: 4px; background: var(--pine); }
+  .progress-text { font-size: 13px; color: var(--ink-2); }
+}
+
+.ghost-btn.small { height: 32px; padding: 0 10px; font-size: 13px; mat-icon { font-size: 17px; width: 17px; height: 17px; } }
+
+.loan-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  .grow { flex: 1; min-width: 200px; }
+  .form-hint { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--muted); }
+}
+
+.done-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  &:first-of-type { border-top: none; }
+}

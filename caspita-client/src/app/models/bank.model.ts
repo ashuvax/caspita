@@ -73,6 +73,7 @@ export interface Transaction {
   maaserNote: string | null;
   categoryId: number | null;
   categoryOverridden: boolean;
+  splits: { categoryId: number; amount: number }[];
   sourceCategory: string | null;
 }
 
@@ -85,7 +86,7 @@ export interface GroupedMerchant {
   transactions: Transaction[];
 }
 
-export type InsightKind = 'deficit' | 'surplus' | 'category_up' | 'category_down' | 'new_merchant' | 'largest' | 'pace';
+export type InsightKind = 'deficit' | 'surplus' | 'category_up' | 'category_down' | 'new_merchant' | 'largest' | 'pace' | 'budget';
 
 export interface Insight {
   kind: InsightKind;
@@ -112,5 +113,5 @@ export interface TransactionsResult {
   isCurrentMonth: boolean;
   daysElapsed: number;
   daysInMonth: number;
-  byCategory: { categoryId: number | null; expenses: number; count: number; prevExpenses: number; avgExpenses: number }[];
+  byCategory: { categoryId: number | null; expenses: number; count: number; prevExpenses: number; avgExpenses: number; budget: number | null }[];
 }

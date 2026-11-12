@@ -84,7 +84,7 @@ export interface LoanSuggestion {
 const LOAN_WORD = /הלוא|הלווא/;
 /** חיובים שהם תשלום על הלוואה שלקחתי, לא הלוואה שנתתי */
 const OWN_LOAN_DEBIT = /הו"?ק|קרן|רבית|ריבית|גמ"?ח|משכנ|טפחות/;
-/** השוואת שמות: בלי גרשיים, ש/ס ו-ו/וו מתאחדים (מוסקוביץ = מושקוביץ) */
+/** השוואת שמות: בלי גרשיים, ש/ס ו-ו/וו מתאחדים (שפירא = ספירא) */
 function nameKey(value: string): string {
   return normalizeText(value).replace(/ש/g, 'ס').replace(/וו/g, 'ו').replace(/[^\p{L}\p{N} ]/gu, ' ');
 }

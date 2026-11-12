@@ -143,6 +143,23 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     });
   }
 
+  setBudget(c: Category, event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.trim();
+    const value = raw === '' ? null : Number(raw);
+    if (value !== null && (!Number.isFinite(value) || value < 0)) return;
+    this.finance.updateCategory(c.id, { monthlyBudget: value }).subscribe({
+      next: (categories) => {
+        this.categories = categories;
+        this.snackBar.open(value ? `תקציב ל${c.name}: ${value.toLocaleString('he-IL')} ₪ בחודש` : `הוסר התקציב של ${c.name}`, 'סגור', { duration: 3000 });
+      },
+      error: () => this.snackBar.open('שגיאה בשמירת התקציב', 'סגור', { duration: 4000 }),
+    });
+  }
+
+  blur(event: Event): void {
+    (event.target as HTMLInputElement).blur();
+  }
+
   categoryName(id: number): string {
     return this.categories.find((c) => c.id === id)?.name ?? '';
   }

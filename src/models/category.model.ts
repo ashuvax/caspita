@@ -7,9 +7,15 @@ export class Category extends Model<InferAttributes<Category>, InferCreationAttr
   /** שם אייקון Material */
   declare icon: CreationOptional<string>;
   declare sortOrder: CreationOptional<number>;
+  /** תקציב חודשי (₪). null = בלי תקציב */
+  declare monthlyBudget: CreationOptional<number | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
+
+export const categoryNewColumns = {
+  monthlyBudget: { type: DataTypes.DOUBLE, allowNull: true },
+};
 
 Category.init(
   {
@@ -17,6 +23,7 @@ Category.init(
     name: { type: DataTypes.STRING, allowNull: false, unique: true },
     icon: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'label' },
     sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    ...categoryNewColumns,
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },
