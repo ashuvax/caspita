@@ -1,0 +1,124 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>קטגוריות</h1>
+    <p class="header-sub">קטגוריה לכל ספק — חלה על כל העסקאות שלו. אפשר לשנות לעסקה בודדת בחלון העסקה</p>
+  </div>
+  <div class="header-controls">
+    <button class="ghost-btn" (click)="autoAssign()" [disabled]="autoRunning" matTooltip="לפי הקטגוריות של חברות האשראי ומילות מפתח. ספקים שכבר שויכו לא ישתנו">
+      <mat-icon>auto_fix_high</mat-icon>שיוך אוטומטי לספקים ללא קטגוריה
+    </button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-ring delay-1"></div>
+    <div class="spinner-ring delay-2"></div>
+  </div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading">
+  <div class="layout">
+    <!-- ספקים -->
+    <div class="panel merchants-panel">
+      <h3 class="panel-title"><mat-icon>storefront</mat-icon>שיוך ספקים</h3>
+      <p class="panel-sub">ספקים מ-12 החודשים האחרונים, ממוינים לפי סכום</p>
+
+      <div class="inline-form">
+        <mat-form-field appearance="outline">
+          <mat-label>הצג</mat-label>
+          <mat-select [(ngModel)]="filter">
+            <mat-option value="unassigned">ללא קטגוריה ({{ unassignedCount() }})</mat-option>
+            <mat-option value="all">כל הספקים ({{ merchants.length }})</mat-option>
+            <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }} ({{ c.merchantCount }})</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="grow">
+          <mat-label>חיפוש ספק</mat-label>
+          <input matInput [(ngModel)]="search" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="table-scroll"><table class="data-table">
+        <thead>
+          <tr>
+            <th>ספק</th>
+            <th class="num">סה"כ</th>
+            <th>קטגוריה</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of visibleMerchants()">
+            <td>
+              {{ m.merchant }}
+              <div class="muted">
+                {{ m.count }} עסקאות · אחרונה {{ m.lastDate | date: 'dd/MM/yy' }}
+                <ng-container *ngIf="m.sourceCategory"> · לפי חברת האשראי: {{ m.sourceCategory }}</ng-container>
+              </div>
+            </td>
+            <td class="num"><span class="amount" [class.expense]="m.total < 0" [class.income]="m.total > 0">{{ m.total | number: '1.0-0' }}</span></td>
+            <td>
+              <mat-form-field appearance="outline" class="cat-select field-compact">
+                <mat-select [value]="m.categoryId" (selectionChange)="assign(m, $event.value)" placeholder="בחר קטגוריה">
+                  <mat-option [value]="null">— ללא —</mat-option>
+                  <mat-option *ngFor="let c of categories" [value]="c.id">
+                    <mat-icon class="opt-icon">{{ c.icon }}</mat-icon>{{ c.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </td>
+          </tr>
+        </tbody>
+      </table></div>
+      <p class="panel-sub empty-note" *ngIf="visibleMerchants().length === 0">
+        {{ filter === 'unassigned' ? 'כל הספקים משויכים לקטגוריה 🎉' : 'אין ספקים להצגה' }}
+      </p>
+    </div>
+
+    <!-- ניהול קטגוריות -->
+    <div class="panel categories-panel">
+      <h3 class="panel-title"><mat-icon>category</mat-icon>רשימת הקטגוריות</h3>
+      <p class="panel-sub">הוספה, שינוי שם ואייקון, מחיקה</p>
+
+      <div class="cat-row add-row">
+        <mat-form-field appearance="outline" class="icon-select field-compact">
+          <mat-select [(ngModel)]="newIcon">
+            <mat-select-trigger><mat-icon>{{ newIcon }}</mat-icon></mat-select-trigger>
+            <mat-option *ngFor="let i of icons" [value]="i"><mat-icon>{{ i }}</mat-icon></mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="grow">
+          <mat-label>קטגוריה חדשה</mat-label>
+          <input matInput [(ngModel)]="newName" (keydown.enter)="addCategory()" />
+        </mat-form-field>
+        <button class="icon-btn" (click)="addCategory()" [disabled]="!newName.trim()" matTooltip="הוסף"><mat-icon>add</mat-icon></button>
+      </div>
+
+      <div class="cat-row" *ngFor="let c of categories">
+        <ng-container *ngIf="editingId !== c.id">
+          <mat-icon class="cat-icon">{{ c.icon }}</mat-icon>
+          <span class="cat-name">{{ c.name }}</span>
+          <span class="muted">{{ c.merchantCount }}</span>
+          <button class="icon-btn" (click)="startEdit(c)" matTooltip="עריכה"><mat-icon>edit</mat-icon></button>
+          <button class="icon-btn danger" (click)="deleteCategory(c)" matTooltip="מחיקה"><mat-icon>delete_outline</mat-icon></button>
+        </ng-container>
+        <ng-container *ngIf="editingId === c.id">
+          <mat-form-field appearance="outline" class="icon-select field-compact">
+            <mat-select [(ngModel)]="editIcon">
+              <mat-select-trigger><mat-icon>{{ editIcon }}</mat-icon></mat-select-trigger>
+              <mat-option *ngFor="let i of icons" [value]="i"><mat-icon>{{ i }}</mat-icon></mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="grow">
+            <input matInput [(ngModel)]="editName" (keydown.enter)="saveEdit()" />
+          </mat-form-field>
+          <button class="icon-btn" (click)="saveEdit()" matTooltip="שמור"><mat-icon>check</mat-icon></button>
+          <button class="icon-btn" (click)="editingId = null" matTooltip="ביטול"><mat-icon>close</mat-icon></button>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</ng-container>

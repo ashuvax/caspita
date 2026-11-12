@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>{{ editing ? 'עריכת חיסכון' : 'חיסכון חדש' }}</h2>
+
+<mat-dialog-content class="body">
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>סוג</mat-label>
+      <mat-select [(ngModel)]="kind" (selectionChange)="onKindChange()">
+        <mat-option *ngFor="let k of kinds" [value]="k[0]">{{ k[1] }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>שם</mat-label>
+      <input matInput [(ngModel)]="name" [placeholder]="kind === 'study_fund' ? 'לדוגמה: מיטב — קרן השתלמות' : 'לדוגמה: פיקדון גמ״ח הקהילה'" cdkFocusInitial />
+    </mat-form-field>
+  </div>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>יתרה ₪</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="balance" />
+      <mat-hint>מהדוח או מאתר הקופה</mat-hint>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>נכון לתאריך</mat-label>
+      <input matInput type="date" [(ngModel)]="balanceDate" />
+    </mat-form-field>
+  </div>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>ניכוי במשיכה %</mat-label>
+      <input matInput type="number" min="0" max="100" [(ngModel)]="penaltyPct" />
+      <mat-hint>פיקדון בגמ"ח — בדרך כלל 10%</mat-hint>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ kind === 'study_fund' ? 'נזילה מתאריך' : 'אפשר למשוך מתאריך' }}</mat-label>
+      <input matInput type="date" [(ngModel)]="liquidDate" />
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>הערה (רשות)</mat-label>
+    <input matInput [(ngModel)]="note" />
+  </mat-form-field>
+
+  <p class="hint">
+    היתרה מתעדכנת לבד: הפקדות שמשויכות מהבנק אחרי תאריך היתרה מתווספות אליה. קרן השתלמות שמופקדת מהמשכורת לא עוברת בבנק — כדאי לעדכן יתרה מדי פעם.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">ביטול</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="!valid() || saving">שמירה</button>
+</mat-dialog-actions>

@@ -1,0 +1,46 @@
+<h2 mat-dialog-title>עסקת מזומן</h2>
+
+<mat-dialog-content class="cash-body">
+  <mat-button-toggle-group [(ngModel)]="direction" class="direction" hideSingleSelectionIndicator>
+    <mat-button-toggle value="expense">הוצאה (שילמתי)</mat-button-toggle>
+    <mat-button-toggle value="income">הכנסה (קיבלתי)</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>סכום ₪</mat-label>
+    <input matInput type="number" min="0" [(ngModel)]="amount" cdkFocusInitial />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>{{ direction === 'expense' ? 'למי / על מה' : 'ממי / על מה' }}</mat-label>
+    <input matInput [(ngModel)]="description" placeholder="לדוגמה: שוק, חבר החזיר הלוואה" />
+  </mat-form-field>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>תאריך</mat-label>
+      <input matInput type="date" [(ngModel)]="date" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>קטגוריה</mat-label>
+      <mat-select [(ngModel)]="categoryId">
+        <mat-option [value]="null">— ללא —</mat-option>
+        <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>הערה (רשות)</mat-label>
+    <input matInput [(ngModel)]="note" />
+  </mat-form-field>
+
+  <p class="hint" *ngIf="direction === 'income'">
+    הכנסה במזומן נספרת במעשרות. החזר הלוואה במזומן באותו סכום שהוצאת — מקוזז אוטומטית ולא נספר.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">ביטול</button>
+  <button mat-raised-button color="primary" (click)="save()" [disabled]="!valid() || saving">שמור</button>
+</mat-dialog-actions>

@@ -1,0 +1,112 @@
+:host {
+  display: block;
+}
+
+.row-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  transition: background 0.15s ease;
+
+  &.clickable {
+    cursor: pointer;
+    &:hover {
+      background: var(--paper-2);
+      .row-chevron { color: var(--pine); }
+    }
+  }
+}
+
+:host:last-child .row-item { border-bottom: none; }
+
+.row-accent-bar { display: none; }
+
+.row-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+  &.icon-primary { background: var(--pine-tint); mat-icon { color: var(--pine); } }
+  &.icon-success { background: var(--leaf-tint); mat-icon { color: var(--leaf); } }
+  &.icon-warning { background: var(--gold-tint); mat-icon { color: var(--gold-dark); } }
+  &.icon-neutral { background: var(--paper); mat-icon { color: var(--muted); } }
+}
+
+.row-content {
+  flex: 1;
+  min-width: 0;
+
+  .row-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .row-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.row-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+
+  .row-value {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink);
+    direction: ltr;
+
+    /* הוצאה ברשימת הוצאות היא המצב הרגיל — בדיו, לא באדום */
+    &.expense { color: var(--ink); }
+    &.income  { color: var(--leaf); }
+  }
+
+  .row-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+
+    &.badge-active   { background: var(--gold-tint); color: var(--gold-dark); }
+    &.badge-inactive { background: var(--paper); color: var(--muted); }
+    &.badge-warning  { background: var(--paper); color: var(--ink-2); border: 1px dashed var(--line-strong); }
+  }
+}
+
+.row-chevron {
+  color: var(--line-strong);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .row-item { padding: 12px 14px; gap: 12px; }
+  .row-icon { width: 34px; height: 34px; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
+  .row-chevron { display: none; }
+}

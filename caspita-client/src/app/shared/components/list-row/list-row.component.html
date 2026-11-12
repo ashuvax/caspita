@@ -1,0 +1,46 @@
+<div
+  class="row-item"
+  [class.clickable]="clickable"
+  [class.gradient-primary]="iconGradient === 'primary'"
+  [class.gradient-success]="iconGradient === 'success'"
+  [class.gradient-warning]="iconGradient === 'warning'"
+  (click)="onClick()"
+  matRipple
+  [matRippleDisabled]="!clickable"
+>
+  <div class="row-accent-bar"></div>
+
+  <div class="row-icon" [class]="'icon-' + iconGradient">
+    <mat-icon>{{ icon }}</mat-icon>
+  </div>
+
+  <div class="row-content">
+    <div class="row-title">{{ title }}</div>
+    <div class="row-subtitle" *ngIf="subtitle">{{ subtitle }}</div>
+  </div>
+
+  <div class="row-right">
+    <div
+      class="row-value"
+      *ngIf="value"
+      [class.expense]="valueColor === 'expense'"
+      [class.income]="valueColor === 'income'"
+    >
+      {{ value }}
+    </div>
+
+    <span
+      class="row-badge"
+      *ngIf="badge"
+      [class.badge-active]="badgeColor === 'active'"
+      [class.badge-inactive]="badgeColor === 'inactive'"
+      [class.badge-warning]="badgeColor === 'warning'"
+    >
+      {{ badge }}
+    </span>
+
+    <ng-content select="[slot=actions]"></ng-content>
+  </div>
+
+  <mat-icon class="row-chevron" *ngIf="clickable">chevron_left</mat-icon>
+</div>

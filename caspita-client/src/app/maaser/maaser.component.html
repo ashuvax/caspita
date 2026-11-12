@@ -1,0 +1,130 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>מעשרות</h1>
+    <p class="header-sub">{{ summary?.settings?.percent ?? 10 }}% מההכנסות, מול התשלומים לספקי המעשרות</p>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-ring delay-1"></div>
+    <div class="spinner-ring delay-2"></div>
+  </div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading && summary">
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-label">{{ balanceLabel(summary.totals.balance) }}</span>
+      <span class="stat-value" [class.expense]="summary.totals.balance > 0.5" [class.income]="summary.totals.balance < -0.5">
+        {{ (summary.totals.balance < 0 ? -summary.totals.balance : summary.totals.balance) | number: '1.0-0' }} ₪
+      </span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-card" *ngIf="currentMonthRow() as cur">
+      <span class="stat-label">החודש: חובה / שולם</span>
+      <span class="stat-value small">{{ cur.due | number: '1.0-0' }} ₪ / {{ cur.paid | number: '1.0-0' }} ₪</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-card">
+      <span class="stat-label">סה"כ שולם בתקופה</span>
+      <span class="stat-value small">{{ summary.totals.paid | number: '1.0-0' }} ₪</span>
+    </div>
+  </div>
+
+  <div class="warning-banner info" *ngIf="rulesOf('donation').length === 0">
+    <mat-icon>info</mat-icon>
+    <div>
+      <strong>עדיין לא הוגדרו ספקי מעשרות</strong>
+      הוסיפו למטה את שמות העמותות/הקופות שאתם משלמים להן, או פתחו עסקה בעמוד העסקאות וסמנו אותה ידנית.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 class="panel-title"><mat-icon>calendar_month</mat-icon>לפי חודשים</h3>
+    <p class="panel-sub">יתרה מצטברת: חיובי = עוד חייבים, שלילי = ניתן מעבר (זכות לחודשים הבאים)</p>
+    <div class="table-scroll"><table class="data-table">
+      <thead>
+        <tr>
+          <th>חודש</th>
+          <th class="num">הכנסות</th>
+          <th class="num">חובת מעשר</th>
+          <th class="num">שולם</th>
+          <th class="num">יתרה מצטברת</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of summary.months">
+          <td>{{ m.month | monthLabel }}</td>
+          <td class="num">{{ m.income | number: '1.0-0' }}</td>
+          <td class="num">{{ m.due | number: '1.0-0' }}</td>
+          <td class="num"><span class="amount" [class.income]="m.paid >= m.due && m.paid > 0">{{ m.paid | number: '1.0-0' }}</span></td>
+          <td class="num"><span class="amount" [class.expense]="m.balance > 0.5" [class.income]="m.balance < -0.5">{{ m.balance | number: '1.0-0' }}</span></td>
+        </tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="rules-grid">
+    <div class="panel">
+      <h3 class="panel-title"><mat-icon>volunteer_activism</mat-icon>ספקי מעשרות</h3>
+      <p class="panel-sub">כל תשלום שהתיאור שלו מכיל את אחד השמות האלה נספר כמעשרות (בבנק או באשראי)</p>
+      <div class="inline-form">
+        <mat-form-field appearance="outline" class="grow">
+          <mat-label>שם ספק / עמותה</mat-label>
+          <input matInput [(ngModel)]="newDonation" (keydown.enter)="addRule('donation')" placeholder="לדוגמה: קופת העיר" />
+        </mat-form-field>
+        <button class="add-btn" (click)="addRule('donation')" [disabled]="!newDonation.trim()"><mat-icon>add</mat-icon>הוסף</button>
+      </div>
+      <div class="rule-chips">
+        <span class="chip chip-maaser" *ngFor="let r of rulesOf('donation')">
+          {{ r.pattern }}
+          <mat-icon class="chip-remove" (click)="removeRule(r)" matTooltip="הסר">close</mat-icon>
+        </span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title"><mat-icon>money_off</mat-icon>הכנסות פטורות</h3>
+      <p class="panel-sub">כברירת מחדל כל זיכוי בחשבון בנק נחשב הכנסה. כאן מוסיפים מקורות שלא חייבים במעשר (העברה בין חשבונות שלי, הלוואה, החזר)</p>
+      <div class="inline-form">
+        <mat-form-field appearance="outline" class="grow">
+          <mat-label>טקסט בתיאור הזיכוי</mat-label>
+          <input matInput [(ngModel)]="newExclude" (keydown.enter)="addRule('income_exclude')" placeholder="לדוגמה: העברה מחשבון" />
+        </mat-form-field>
+        <button class="add-btn" (click)="addRule('income_exclude')" [disabled]="!newExclude.trim()"><mat-icon>add</mat-icon>הוסף</button>
+      </div>
+      <div class="rule-chips">
+        <span class="chip" *ngFor="let r of rulesOf('income_exclude')">
+          {{ r.pattern }}
+          <mat-icon class="chip-remove" (click)="removeRule(r)" matTooltip="הסר">close</mat-icon>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 class="panel-title"><mat-icon>tune</mat-icon>הגדרות חישוב</h3>
+    <p class="panel-sub">כל עסקה אפשר לסמן ידנית ("נספר" / "לא נספר") בחלון העסקה בעמוד העסקאות</p>
+    <div class="inline-form">
+      <mat-form-field appearance="outline">
+        <mat-label>אחוז</mat-label>
+        <mat-select [(ngModel)]="settingsForm.percent">
+          <mat-option [value]="10">10% — מעשר</mat-option>
+          <mat-option [value]="20">20% — חומש</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>מתחילים לחשב מחודש</mat-label>
+        <input matInput type="month" [(ngModel)]="settingsForm.startMonth" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>יתרת פתיחה (חוב קודם ₪)</mat-label>
+        <input matInput type="number" [(ngModel)]="settingsForm.openingBalance" />
+      </mat-form-field>
+      <button class="add-btn" (click)="saveSettings()" [disabled]="savingSettings"><mat-icon>save</mat-icon>שמור</button>
+    </div>
+  </div>
+</ng-container>

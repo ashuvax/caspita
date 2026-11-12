@@ -1,0 +1,95 @@
+<div class="dialog-header">
+  <div class="dialog-icon">
+    <mat-icon>storefront</mat-icon>
+  </div>
+  <div class="dialog-title-block">
+    <h2>{{ merchant.name }}</h2>
+    <span class="dialog-sub">{{ merchant.transactionCount }} עסקאות · סה"כ {{ netAmount() | number: '1.2-2' }} ₪</span>
+  </div>
+  <button class="close-btn" (click)="close()">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<div class="merchant-category" *ngIf="!allHidden()">
+  <mat-icon>category</mat-icon>
+  <span class="mc-label">קטגוריה לכל העסקאות של הספק:</span>
+  <mat-form-field appearance="outline" class="mc-select">
+    <mat-select [value]="merchant.categoryId" (selectionChange)="setMerchantCategory($event.value)" placeholder="בחר קטגוריה">
+      <mat-option [value]="null">— ללא —</mat-option>
+      <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <span class="muted" *ngIf="merchant.transactions[0]?.sourceCategory as src">לפי חברת האשראי: {{ src }}</span>
+</div>
+
+<div class="merchant-actions" *ngIf="!allHidden()">
+  <button class="ghost-btn" *ngIf="hasExpenses()" (click)="addAsDonationPayee()">
+    <mat-icon>volunteer_activism</mat-icon>
+    כל התשלומים לספק הזה הם מעשרות
+  </button>
+  <button class="ghost-btn" *ngIf="hasBankIncome()" (click)="addAsExcludedIncome()">
+    <mat-icon>money_off</mat-icon>
+    הכנסה זו פטורה ממעשר
+  </button>
+</div>
+
+<mat-dialog-content class="dialog-body">
+  <div class="txn-list">
+    <div class="txn-row" *ngFor="let txn of merchant.transactions">
+      <div class="txn-date">
+        <span class="txn-day">{{ txn.date | date: 'dd' }}</span>
+        <span class="txn-month">{{ txn.date | date: 'MMM' }}</span>
+      </div>
+      <div class="txn-info">
+        <span class="txn-desc">{{ txn.description }}</span>
+        <div class="txn-meta">
+          <span class="txn-bank">{{ txn.bankName }}</span>
+          <span class="txn-account">{{ txn.accountNumber }}</span>
+          <span class="chip chip-warning" *ngIf="txn.status === 'pending'">ממתין</span>
+          <span class="chip chip-info" *ngIf="txn.installmentTotal">תשלום {{ txn.installmentNumber }}/{{ txn.installmentTotal }}</span>
+          <span class="chip chip-muted" *ngIf="txn.processedDate !== txn.date && txn.accountKind === 'card'">חיוב ב-{{ txn.processedDate | date: 'dd/MM' }}</span>
+          <span class="txn-memo" *ngIf="txn.memo">{{ txn.memo }}</span>
+        </div>
+        <div class="maaser-line" *ngIf="isCounted(txn)">
+          <span class="chip" [class.chip-maaser]="txn.maaserRole === 'donation'" [class.chip-info]="txn.maaserRole === 'income'">
+            {{ roleLabel(txn) }}
+          </span>
+          <mat-button-toggle-group
+            class="maaser-toggle"
+            [value]="choiceOf(txn)"
+            (change)="setChoice(txn, $event.value)"
+            [disabled]="saving.has(txn.id)"
+            hideSingleSelectionIndicator
+          >
+            <mat-button-toggle value="auto" matTooltip="לפי רשימת הספקים והכללים">אוטומטי</mat-button-toggle>
+            <mat-button-toggle value="include">{{ includeLabel(txn) }}</mat-button-toggle>
+            <mat-button-toggle value="exclude">לא נספר</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+        <div class="maaser-line" *ngIf="isCounted(txn)">
+          <mat-form-field appearance="outline" class="txn-cat-select field-compact">
+            <mat-select [value]="txnCategoryValue(txn)" (selectionChange)="setTransactionCategory(txn, $event.value)">
+              <mat-option value="merchant">כמו הספק ({{ categoryName(merchant.categoryId) }})</mat-option>
+              <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }} — לעסקה זו בלבד</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <span class="chip chip-info" *ngIf="txn.categoryOverridden">קטגוריה שונה לעסקה זו</span>
+        </div>
+        <div class="maaser-line" *ngIf="txn.isCardPayment">
+          <span class="chip chip-muted"><mat-icon>credit_card</mat-icon>תשלום כרטיס אשראי — לא נספר. כל הרכישות שבו מופיעות לפי ספק</span>
+        </div>
+        <div class="maaser-line" *ngIf="txn.isInternalTransfer">
+          <span class="chip chip-muted"><mat-icon>swap_horiz</mat-icon>העברה בין החשבונות שלך — לא הכנסה ולא הוצאה</span>
+        </div>
+        <div class="maaser-line" *ngIf="txn.accountKind === 'cash'">
+          <button class="ghost-btn" (click)="deleteCash(txn)"><mat-icon>delete_outline</mat-icon>מחק עסקת מזומן</button>
+        </div>
+      </div>
+      <div class="txn-amount" [class.expense]="isExpense(txn)" [class.income]="!isExpense(txn)">
+        {{ absAmount(txn) | number: '1.2-2' }} ₪
+        <div class="txn-original" *ngIf="txn.originalCurrency !== 'ILS'">{{ txn.originalAmount | number: '1.2-2' }} {{ txn.originalCurrency }}</div>
+      </div>
+    </div>
+  </div>
+</mat-dialog-content>

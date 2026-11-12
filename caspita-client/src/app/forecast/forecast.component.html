@@ -1,0 +1,122 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>תחזית חיובים</h1>
+    <p class="header-sub">כמה עתיד לרדת מכל חשבון עד סוף החודש — חיובי אשראי והוראות קבע</p>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-ring delay-1"></div>
+    <div class="spinner-ring delay-2"></div>
+  </div>
+  <p class="loading-text">מחשב תחזית...</p>
+</div>
+
+<ng-container *ngIf="!loading && result">
+  <div class="warning-banner" *ngFor="let acc of atRisk()">
+    <mat-icon>trending_down</mat-icon>
+    <div>
+      <strong>{{ acc.accountName }} צפוי לרדת למינוס ב-{{ acc.minBalanceDate | date: 'dd/MM' }}</strong>
+      היתרה הנמוכה הצפויה: <span class="amount">{{ acc.minBalance | number: '1.0-0' }}</span> ₪ — כדאי להעביר לפחות {{ shortfall(acc) | number: '1.0-0' }} ₪ לפני כן.
+    </div>
+  </div>
+
+  <div class="warning-banner info" *ngIf="result.unlinkedCards.length">
+    <mat-icon>link_off</mat-icon>
+    <div>
+      <strong>כרטיסים שלא ידוע מאיזה חשבון הם יורדים</strong>
+      {{ result.unlinkedCards.join(', ') }} — אפשר לקבוע בעמוד "בנקים וכרטיסים". אחרי סנכרון עם היסטוריה זה מזוהה אוטומטית.
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="result.accounts.length === 0">
+    <div class="empty-icon"><mat-icon>account_balance</mat-icon></div>
+    <p class="empty-title">אין חשבונות בנק מסונכרנים</p>
+    <p class="empty-sub">הוסיפו בנק ובצעו סנכרון</p>
+  </div>
+
+  <div class="panel account-panel" *ngFor="let acc of result.accounts" [class.negative]="acc.willGoNegative">
+    <div class="account-head">
+      <div>
+        <h3 class="panel-title"><mat-icon>account_balance</mat-icon>{{ acc.accountName }}</h3>
+        <p class="panel-sub">
+          <ng-container *ngIf="acc.linkedCards.length">כרטיסים: {{ acc.linkedCards.join(', ') }}</ng-container>
+          <ng-container *ngIf="!acc.linkedCards.length">אין כרטיסי אשראי מקושרים</ng-container>
+        </p>
+      </div>
+      <div class="balances">
+        <div class="bal">
+          <span class="bal-label">יתרה עכשיו</span>
+          <span class="amount" [class.expense]="(acc.balance ?? 0) < 0">{{ acc.balance !== null ? (acc.balance | number: '1.0-0') + ' ₪' : '—' }}</span>
+          <span class="bal-date" *ngIf="acc.balanceDate">נכון ל-{{ acc.balanceDate | date: 'dd/MM' }}</span>
+        </div>
+        <mat-icon class="arrow">arrow_back</mat-icon>
+        <div class="bal">
+          <span class="bal-label">צפוי לרדת</span>
+          <span class="amount expense">{{ totalDebits(acc) | number: '1.0-0' }} ₪</span>
+        </div>
+        <mat-icon class="arrow">arrow_back</mat-icon>
+        <div class="bal">
+          <span class="bal-label">יתרה בסוף התקופה</span>
+          <span class="amount" [class.expense]="(acc.endBalance ?? 0) < 0" [class.income]="(acc.endBalance ?? 0) >= 0">
+            {{ acc.endBalance !== null ? (acc.endBalance | number: '1.0-0') + ' ₪' : '—' }}
+          </span>
+          <span class="bal-date" *ngIf="acc.minBalance !== null && acc.minBalance !== acc.endBalance">
+            מינימום {{ acc.minBalance | number: '1.0-0' }} ב-{{ acc.minBalanceDate | date: 'dd/MM' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="month-chips" *ngIf="acc.months.length">
+      <span class="chip chip-info" *ngFor="let m of acc.months">
+        {{ m.month | monthLabel }}: יורד {{ m.debits | number: '1.0-0' }} ₪<ng-container *ngIf="m.credits"> · נכנס {{ m.credits | number: '1.0-0' }} ₪</ng-container>
+      </span>
+    </div>
+
+    <app-balance-chart
+      *ngIf="acc.events.length && acc.balance !== null"
+      [startBalance]="acc.balance"
+      [startDate]="acc.balanceDate ?? result.from"
+      [endDate]="result.until"
+      [events]="acc.events"
+    ></app-balance-chart>
+
+    <button class="ghost-btn table-toggle" *ngIf="acc.events.length" (click)="toggleTable(acc.accountId)">
+      <mat-icon>{{ isOpen(acc.accountId) ? 'expand_less' : 'expand_more' }}</mat-icon>
+      {{ isOpen(acc.accountId) ? 'הסתר פירוט' : 'פירוט ' + acc.events.length + ' תנועות צפויות' }}
+    </button>
+
+    <div class="table-scroll" *ngIf="acc.events.length && isOpen(acc.accountId)">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>תאריך</th>
+          <th>תיאור</th>
+          <th class="num">סכום</th>
+          <th class="num">יתרה אחרי</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of acc.events">
+          <td>{{ e.date | date: 'dd/MM' }}</td>
+          <td>
+            <mat-icon class="kind-icon">{{ e.kind === 'card' ? 'credit_card' : 'autorenew' }}</mat-icon>
+            {{ e.label }}
+            <span class="chip chip-warning" *ngIf="e.late">באיחור — עוד לא ירד</span>
+            <span class="chip chip-muted" *ngIf="e.estimated && e.kind === 'card'" matTooltip="מחזור החיוב עדיין פתוח. הסכום הוא הגבוה מבין מה שכבר נקלט לבין החציון של 3 החודשים האחרונים">
+              צפוי · עד כה {{ e.knownAmount | number: '1.0-0' }} ₪
+            </span>
+            <span class="chip chip-muted" *ngIf="e.estimated && e.kind === 'recurring'" matTooltip="הסכום משתנה מחודש לחודש — מוצג חציון">משוער</span>
+          </td>
+          <td class="num"><span class="amount" [class.expense]="e.amount < 0" [class.income]="e.amount > 0">{{ e.amount | number: '1.0-0' }}</span></td>
+          <td class="num"><span class="amount" [class.expense]="e.balanceAfter < 0">{{ acc.balance !== null ? (e.balanceAfter | number: '1.0-0') : '—' }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="panel-sub" *ngIf="!acc.events.length">אין חיובים צפויים בתקופה</p>
+  </div>
+</ng-container>

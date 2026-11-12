@@ -1,0 +1,60 @@
+<h2 mat-dialog-title>{{ isEdit ? 'עריכת בנק' : 'הוספת בנק / חברת אשראי' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>בנק / חברת אשראי</mat-label>
+      <mat-select formControlName="companyId">
+        <mat-option *ngFor="let c of data.supportedCompanies" [value]="c.id">
+          {{ c.displayName }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('companyId')?.invalid">יש לבחור בנק</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>שם תצוגה</mat-label>
+      <input matInput formControlName="displayName" placeholder="לדוגמה: הפועלים אישי" />
+      <mat-error *ngIf="form.get('displayName')?.invalid">שם תצוגה הוא שדה חובה</mat-error>
+    </mat-form-field>
+
+    <mat-slide-toggle formControlName="isActive" *ngIf="isEdit" class="toggle">
+      פעיל
+    </mat-slide-toggle>
+  </form>
+
+  <ng-container *ngIf="selectedCompany">
+    <mat-divider class="divider"></mat-divider>
+    <p class="credentials-title">פרטי התחברות</p>
+    <p class="credentials-note" *ngIf="isEdit">אם לא תמלא את השדות — הפרטים הקיימים יישמרו</p>
+
+    <form [formGroup]="credentialsForm">
+      <mat-form-field
+        *ngFor="let field of selectedCompany.fields"
+        appearance="outline"
+        class="full-width"
+      >
+        <mat-label>{{ field.label }}</mat-label>
+        <input
+          matInput
+          [formControlName]="field.key"
+          [type]="field.type"
+          [placeholder]="field.label"
+        />
+        <mat-error *ngIf="credentialsForm.get(field.key)?.invalid">{{ field.label }} הוא שדה חובה</mat-error>
+      </mat-form-field>
+    </form>
+  </ng-container>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">ביטול</button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="submit()"
+    [disabled]="form.invalid || (!isEdit && selectedCompany && credentialsForm.invalid)"
+  >
+    {{ isEdit ? 'שמור' : 'הוסף' }}
+  </button>
+</mat-dialog-actions>

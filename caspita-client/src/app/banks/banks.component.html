@@ -1,0 +1,90 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>בנקים וכרטיסי אשראי</h1>
+    <p class="header-sub">{{ banks.length }} חיבורים מוגדרים</p>
+  </div>
+  <button class="add-btn" (click)="openAddDialog()" matRipple>
+    <mat-icon>add</mat-icon>
+    הוסף בנק
+  </button>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-ring delay-1"></div>
+    <div class="spinner-ring delay-2"></div>
+  </div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<div class="empty-state" *ngIf="!loading && banks.length === 0">
+  <div class="empty-icon">
+    <mat-icon>account_balance</mat-icon>
+  </div>
+  <p class="empty-title">אין בנקים מוגדרים עדיין</p>
+  <p class="empty-sub">הוסף בנק כדי להתחיל לעקוב אחר ההוצאות</p>
+  <button class="add-btn" (click)="openAddDialog()" matRipple>
+    <mat-icon>add</mat-icon>
+    הוסף בנק ראשון
+  </button>
+</div>
+
+<div class="list-container" *ngIf="!loading && banks.length > 0">
+  <app-list-row
+    *ngFor="let bank of banks"
+    [icon]="bank.kind === 'card' ? 'credit_card' : 'account_balance'"
+    [iconGradient]="bank.isActive ? 'primary' : 'neutral'"
+    [title]="bank.displayName"
+    [subtitle]="bankSubtitle(bank)"
+    [badge]="!bank.isActive ? 'מושהה' : bank.lastSyncError ? 'שגיאה' : 'פעיל'"
+    [badgeColor]="!bank.isActive ? 'inactive' : bank.lastSyncError ? 'warning' : 'active'"
+    [clickable]="false"
+  >
+    <div slot="actions" class="row-actions">
+      <button class="icon-btn" matTooltip="עריכה" (click)="openEditDialog(bank)">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button class="icon-btn danger" matTooltip="מחיקה" (click)="deleteBank(bank)">
+        <mat-icon>delete_outline</mat-icon>
+      </button>
+    </div>
+  </app-list-row>
+</div>
+
+<div class="panel accounts-panel" *ngIf="!loading && accounts.length > 0">
+  <h3 class="panel-title"><mat-icon>account_tree</mat-icon>חשבונות וכרטיסים שזוהו</h3>
+  <p class="panel-sub">לכל כרטיס אשראי — מאיזה חשבון בנק הוא יורד ובאיזה יום. מזוהה אוטומטית לפי התאמת סכומים; אפשר לשנות ידנית.</p>
+
+  <div class="account-row" *ngFor="let acc of bankAccounts()">
+    <mat-icon>account_balance</mat-icon>
+    <span class="account-name">
+      <input class="name-input" [value]="acc.label ?? ''" [placeholder]="acc.bankName + ' · ' + acc.accountNumber" (blur)="renameAccount(acc, $any($event.target).value)" (keydown.enter)="$any($event.target).blur()" />
+      <span class="account-sub">{{ acc.bankName }} · {{ acc.accountNumber }}<ng-container *ngIf="acc.balance !== null"> · יתרה {{ acc.balance | number: '1.0-0' }} ₪</ng-container></span>
+    </span>
+    <mat-slide-toggle class="show-toggle" [checked]="!acc.isHidden" (change)="updateAccount(acc, { isHidden: !$event.checked })">מוצג</mat-slide-toggle>
+  </div>
+
+  <div class="account-row" *ngFor="let acc of cardAccounts()">
+    <mat-icon>credit_card</mat-icon>
+    <span class="account-name">
+      <input class="name-input" [value]="acc.label ?? ''" [placeholder]="acc.bankName + ' · כרטיס ' + acc.accountNumber" (blur)="renameAccount(acc, $any($event.target).value)" (keydown.enter)="$any($event.target).blur()" />
+      <span class="account-sub">{{ acc.bankName }} · כרטיס {{ acc.accountNumber }}<ng-container *ngIf="acc.paysFromSource === 'auto'"> · חשבון החיוב זוהה אוטומטית</ng-container></span>
+    </span>
+    <mat-form-field appearance="outline" class="pays-from">
+      <mat-label>יורד מחשבון</mat-label>
+      <mat-select [value]="acc.paysFromAccountId" (selectionChange)="updateAccount(acc, { paysFromAccountId: $event.value })">
+        <mat-option [value]="null">לא ידוע / זיהוי אוטומטי</mat-option>
+        <mat-option *ngFor="let b of bankAccounts()" [value]="b.id">{{ b.displayName }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="charge-day">
+      <mat-label>יום חיוב</mat-label>
+      <mat-select [value]="acc.chargeDay" (selectionChange)="updateAccount(acc, { chargeDay: $event.value })">
+        <mat-option [value]="null">—</mat-option>
+        <mat-option *ngFor="let d of days" [value]="d">{{ d }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-slide-toggle class="show-toggle" [checked]="!acc.isHidden" (change)="updateAccount(acc, { isHidden: !$event.checked })">מוצג</mat-slide-toggle>
+  </div>
+</div>

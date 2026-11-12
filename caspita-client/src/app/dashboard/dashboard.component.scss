@@ -1,0 +1,89 @@
+.num { direction: ltr; unicode-bidi: isolate; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* ── חודש רגיל ───────────────── */
+.typical {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 22px 24px;
+  border-radius: var(--radius);
+  background: var(--pine);
+  color: #e6efe9;
+
+  .typical-text {
+    flex: 1 1 340px;
+    h2 { margin: 0 0 6px; font-size: 18px; font-weight: 500; color: #b9cec3; }
+    p { margin: 0; font-size: 20px; line-height: 1.5; color: #fff; max-width: 52ch; }
+    strong { font-weight: 600; font-size: 22px; }
+    .income { color: #9fe0bf; }
+    .muted { margin-top: 8px; font-size: 13px; color: #9fbaab; }
+  }
+
+  .typical-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+  .ts {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 150px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.08);
+
+    .ts-label { font-size: 13px; color: #b9cec3; font-weight: 600; }
+    .ts-value { font-family: var(--font-num); font-size: 28px; font-weight: 500; color: #fff; &.neg { color: #f6b8aa; } }
+    .ts-sub { font-size: 13px; color: #b9cec3; &.neg { color: #f6b8aa; } }
+  }
+
+  @media (max-width: 640px) {
+    padding: 18px 16px;
+    .typical-text p { font-size: 17px; }
+    .ts { flex: 1; min-width: 130px; }
+  }
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  .panel { margin-bottom: 18px; min-width: 0; }
+  @media (max-width: 900px) { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* ── קטגוריות ───────────────── */
+.cats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.cat {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+
+  .cat-head {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+    mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--pine); }
+    .cat-name { font-size: 14px; font-weight: 600; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+  .cat-body { display: flex; align-items: flex-end; gap: 10px; }
+  .cat-nums { display: flex; flex-direction: column; min-width: 64px; }
+  .cat-value { font-size: 20px; font-weight: 500; color: var(--ink); line-height: 1.1; }
+  .cat-typical { font-size: 12px; color: var(--muted); }
+
+  .spark {
+    flex: 1;
+    height: 36px;
+    min-width: 0;
+    rect { fill: var(--pine-soft); &.last { fill: var(--pine); } }
+    .typical-line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+  }
+
+  &.trend-up {
+    .cat-value { color: var(--brick); }
+    .spark rect.last { fill: var(--brick); }
+  }
+  &.trend-down .cat-value { color: var(--leaf); }
+}

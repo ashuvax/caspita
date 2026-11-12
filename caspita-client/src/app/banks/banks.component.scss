@@ -1,0 +1,19 @@
+.accounts-panel { margin-top: 28px; }
+.account-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-bottom: 1px solid var(--line);
+  &:last-child { border-bottom: none; }
+  .account-name { flex: 1; min-width: 180px; font-weight: 600; color: var(--ink); }
+  .account-sub { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+  > mat-icon { color: var(--pine); }
+  .show-toggle { margin-inline-end: 4px; }
+  .show-toggle ::ng-deep label { padding-inline-start: 8px; }
+}
+.sync-error { color: var(--brick-dark); font-size: 12px; }
+
+.pays-from { width: 230px; }
+.charge-day { width: 100px; }
+.name-input {
+  display: block; width: 100%; max-width: 280px; border: 1px solid transparent; border-radius: 8px; padding: 4px 6px; margin: -4px -6px 0;
+  font: inherit; font-weight: 600; color: var(--ink); background: transparent;
+  &:hover { border-color: var(--line); }
+  &:focus { outline: none; border-color: var(--pine); background: var(--surface); }
+}

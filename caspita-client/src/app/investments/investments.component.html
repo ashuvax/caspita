@@ -1,0 +1,99 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>השקעות</h1>
+    <p class="header-sub">מחירים חיים מהבורסה, מתעדכנים כל דקה כשהמסך פתוח<ng-container *ngIf="result?.usdIls"> · דולר: {{ result!.usdIls | number: '1.3-3' }} ₪</ng-container></p>
+  </div>
+  <div class="header-controls">
+    <button class="ghost-btn" (click)="load(false, true)" [disabled]="refreshing"><mat-icon [class.spin]="refreshing">refresh</mat-icon>רענון</button>
+    <button class="add-btn" (click)="openDialog()"><mat-icon>add</mat-icon>נייר ערך</button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען מחירים...</p>
+</div>
+
+<ng-container *ngIf="!loading && result">
+  <section class="summary" *ngIf="result.holdings.length">
+    <div class="sum-main">
+      <span class="sum-label">שווי התיק</span>
+      <span class="sum-value"><span class="num">{{ result.totalIls | number: '1.0-0' }}</span> <small>₪</small></span>
+    </div>
+    <div class="sum-item">
+      <span class="sum-label">היום</span>
+      <span class="sum-change" [class.up]="result.dayChangeIls > 0" [class.down]="result.dayChangeIls < 0">
+        {{ result.dayChangeIls > 0 ? '+' : '' }}<span class="num">{{ result.dayChangeIls | number: '1.0-0' }}</span> ₪
+      </span>
+    </div>
+    <div class="sum-item" *ngIf="result.gainIls !== null">
+      <span class="sum-label">רווח/הפסד מהקנייה</span>
+      <span class="sum-change" [class.up]="result.gainIls > 0" [class.down]="result.gainIls < 0">
+        {{ result.gainIls > 0 ? '+' : '' }}<span class="num">{{ result.gainIls | number: '1.0-0' }}</span> ₪
+      </span>
+    </div>
+  </section>
+
+  <div class="empty-state" *ngIf="!result.holdings.length">
+    <div class="empty-icon"><mat-icon>show_chart</mat-icon></div>
+    <p class="empty-title">אין ניירות ערך רשומים</p>
+    <p class="empty-sub">הוסיפו מניה עם סימול (INTC, POLI.TA) כדי לקבל מחיר חי, או קרן עם מחיר ידני</p>
+  </div>
+
+  <section class="panel group" *ngFor="let g of groups">
+    <div class="group-head">
+      <h3 class="panel-title"><mat-icon>account_balance</mat-icon>{{ g.account }}</h3>
+      <span class="group-total"><span class="num">{{ g.totalIls | number: '1.0-0' }}</span> ₪</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>נייר</th>
+            <th class="num">כמות</th>
+            <th class="num">מחיר</th>
+            <th class="num">היום</th>
+            <th class="num">שווי</th>
+            <th class="num">רווח/הפסד</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let h of g.holdings" (click)="openDialog(h)" class="clickable">
+            <td>
+              <span class="h-name">{{ h.name }}</span>
+              <span class="h-sub">
+                {{ h.symbol }}
+                <ng-container *ngIf="h.priceSource === 'manual'">· מחיר ידני מ-{{ h.manualPriceDate | date: 'dd/MM' }}</ng-container>
+                <span class="stale" *ngIf="(manualStaleDays(h) ?? 0) > 30"> · לעדכן</span>
+                <span class="stale" *ngIf="h.priceStale"> · המחיר החי לא התקבל</span>
+              </span>
+            </td>
+            <td class="num">{{ h.quantity | number: '1.0-2' }}</td>
+            <td class="num">{{ currencySign(h) }}{{ h.price | number: '1.2-4' }}</td>
+            <td class="num">
+              <span *ngIf="h.dayChangePct !== null" [class.up]="h.dayChangePct > 0" [class.down]="h.dayChangePct < 0">
+                {{ h.dayChangePct > 0 ? '+' : '' }}{{ h.dayChangePct | number: '1.2-2' }}%
+              </span>
+              <span class="muted" *ngIf="h.dayChangePct === null">—</span>
+            </td>
+            <td class="num">
+              <strong>{{ h.valueIls | number: '1.0-0' }} ₪</strong>
+              <span class="h-sub" *ngIf="h.currency === 'USD'">${{ h.value | number: '1.0-0' }}</span>
+            </td>
+            <td class="num">
+              <ng-container *ngIf="h.gain !== null">
+                <span [class.up]="h.gain > 0" [class.down]="h.gain < 0">{{ h.gain > 0 ? '+' : '' }}{{ currencySign(h) }}{{ h.gain | number: '1.0-0' }}</span>
+                <span class="h-sub">{{ h.gainPct | number: '1.1-1' }}%</span>
+              </ng-container>
+              <span class="muted" *ngIf="h.gain === null">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="footnote" *ngIf="result.holdings.length">
+    מחירי מניות מ-Yahoo Finance (עשויים להתעכב בכמה דקות). קרנות נאמנות לא נסחרות לאורך היום — המחיר שלהן מתעדכן ידנית בלחיצה על השורה.
+  </p>
+</ng-container>

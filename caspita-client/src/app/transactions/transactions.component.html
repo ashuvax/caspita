@@ -1,0 +1,170 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>לאן הולך הכסף</h1>
+    <p class="header-sub">הכנסות והוצאות לפי חודש — כל רכישה מוצגת לפי הספק, בלי כפילויות</p>
+  </div>
+  <div class="header-controls">
+    <button class="icon-btn" (click)="shiftMonth(-1)" matTooltip="חודש קודם"><mat-icon>chevron_right</mat-icon></button>
+    <mat-form-field appearance="outline" class="month-select">
+      <mat-label>חודש</mat-label>
+      <mat-select [(ngModel)]="selectedMonth" (ngModelChange)="onMonthChange()">
+        <mat-option *ngFor="let m of months" [value]="m">{{ monthLabel(m) }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button class="icon-btn" (click)="shiftMonth(1)" [disabled]="selectedMonth === months[0]" matTooltip="חודש הבא"><mat-icon>chevron_left</mat-icon></button>
+    <button class="ghost-btn" (click)="openCash()"><mat-icon>payments</mat-icon>הוספת מזומן</button>
+  </div>
+</div>
+
+<div class="error-banner" *ngIf="errors.length > 0">
+  <mat-icon>warning_amber</mat-icon>
+  <div class="error-content">
+    <strong>שגיאה בסנכרון האחרון מהחיבורים הבאים</strong>
+    <div *ngFor="let err of errors" class="error-item">{{ err.displayName }}: {{ err.error }}</div>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-ring delay-1"></div>
+    <div class="spinner-ring delay-2"></div>
+  </div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<div class="empty-state" *ngIf="!loading && result && merchants.length === 0 && result.hidden.length === 0">
+  <div class="empty-icon"><mat-icon>receipt_long</mat-icon></div>
+  <p class="empty-title">אין עסקאות ל{{ monthLabel() }}</p>
+  <p class="empty-sub" *ngIf="!result.scrapedAt">עדיין לא בוצע סנכרון — לחץ "סנכרן עכשיו" בתפריט (הסנכרון הראשון שולף שנה אחורה)</p>
+</div>
+
+<ng-container *ngIf="!loading && result && (merchants.length > 0 || result.hidden.length > 0)">
+  <!-- שורה תחתונה -->
+  <section class="bottom-line" [class.negative]="result.totals.net < 0">
+    <div class="bl-equation">
+      <div class="bl-item">
+        <span class="bl-label">נכנס</span>
+        <span class="bl-value income">{{ result.totals.income | number: '1.0-0' }}</span>
+        <span class="bl-delta" *ngIf="changePct(result.totals.income, result.previous.income) as p">
+          {{ p > 0 ? '▲' : '▼' }} {{ p > 0 ? p : -p }}% {{ result.isCurrentMonth ? 'מאותו זמן בחודש הקודם' : 'מהחודש הקודם' }}
+        </span>
+      </div>
+      <span class="bl-op" aria-hidden="true">−</span>
+      <div class="bl-item">
+        <span class="bl-label">יצא</span>
+        <span class="bl-value">{{ result.totals.expenses | number: '1.0-0' }}</span>
+        <span class="bl-delta" [class.bad]="(changePct(result.totals.expenses, result.previous.expenses) ?? 0) > 10" *ngIf="changePct(result.totals.expenses, result.previous.expenses) as p">
+          {{ p > 0 ? '▲' : '▼' }} {{ p > 0 ? p : -p }}% {{ result.isCurrentMonth ? 'מאותו זמן בחודש הקודם' : 'מהחודש הקודם' }}
+        </span>
+      </div>
+      <span class="bl-op" aria-hidden="true">=</span>
+      <div class="bl-item bl-net">
+        <span class="bl-label">{{ result.totals.net >= 0 ? (result.isCurrentMonth ? 'נשאר עד עכשיו' : 'נשאר') : 'חסר' }}</span>
+        <span class="bl-value"><span class="amount">{{ result.totals.net | number: '1.0-0' }}</span> <small>₪</small></span>
+        <span class="bl-delta" *ngIf="result.isCurrentMonth">יום {{ result.daysElapsed }} מתוך {{ result.daysInMonth }} בחודש</span>
+      </div>
+    </div>
+    <div class="bl-meter" *ngIf="result.totals.income > 0">
+      <div class="meter-track">
+        <span class="meter-fill" [style.width.%]="spentPct()"></span>
+        <span class="meter-today" *ngIf="result.isCurrentMonth" [style.right.%]="(result.daysElapsed / result.daysInMonth) * 100"></span>
+      </div>
+      <span class="meter-text">
+        {{ spentText() }}
+      </span>
+    </div>
+  </section>
+
+  <!-- מה בולט -->
+  <div class="panel insights" *ngIf="result.insights.length">
+    <h3 class="panel-title"><mat-icon>lightbulb</mat-icon>מה בולט ב{{ monthLabel() }}</h3>
+    <button class="insight" *ngFor="let i of result.insights" [class]="'tone-' + insightTone(i)" (click)="onInsightClick(i)">
+      <mat-icon>{{ insightIcon(i) }}</mat-icon>
+      <span>{{ i.text }}</span>
+    </button>
+  </div>
+
+  <!-- קטגוריות -->
+  <div class="panel" *ngIf="visibleCategories().length">
+    <h3 class="panel-title"><mat-icon>donut_small</mat-icon>הוצאות לפי קטגוריה</h3>
+    <p class="panel-sub">
+      הפס הוא החודש, הקו הדק הוא חודש רגיל (חציון 3 החודשים הקודמים){{ result.isCurrentMonth ? ' — החודש עוד לא הסתיים' : '' }}. לחיצה על קטגוריה מסננת את הרשימה.
+    </p>
+    <div class="cat-list">
+      <button class="cat-row" *ngFor="let c of visibleCategories()" [class.active]="categoryFilter === c.categoryId" (click)="toggleCategoryFilter(c.categoryId)">
+        <mat-icon class="cat-icon" [class.unassigned]="c.categoryId === null">{{ category(c.categoryId)?.icon ?? 'help_outline' }}</mat-icon>
+        <span class="cat-name">{{ category(c.categoryId)?.name ?? 'ללא קטגוריה' }}</span>
+        <span class="cat-bar">
+          <span class="cat-bar-fill" [class.over]="overAverage(c)" [style.width.%]="barPct(c)"></span>
+          <span class="cat-bar-avg" *ngIf="c.avgExpenses > 0" [style.right.%]="avgPct(c)" [matTooltip]="'חודש רגיל: ' + (c.avgExpenses | number: '1.0-0') + ' ₪'"></span>
+        </span>
+        <span class="cat-amount">{{ c.expenses | number: '1.0-0' }}</span>
+        <span class="cat-avg" [class.over]="overAverage(c)" *ngIf="c.avgExpenses > 0">רגיל {{ c.avgExpenses | number: '1.0-0' }}</span>
+        <span class="cat-avg" *ngIf="c.avgExpenses === 0">חדש</span>
+      </button>
+    </div>
+    <button class="ghost-btn more-btn" *ngIf="hiddenCategoryCount() > 0 || showAllCategories" (click)="showAllCategories = !showAllCategories">
+      {{ showAllCategories ? 'הצג פחות' : 'עוד ' + hiddenCategoryCount() + ' קטגוריות' }}
+    </button>
+  </div>
+
+  <!-- רשימה -->
+  <div class="list-head">
+    <mat-button-toggle-group [value]="tab" (change)="setTab($event.value)" hideSingleSelectionIndicator>
+      <mat-button-toggle value="expenses">הוצאות ({{ expenseCount() }})</mat-button-toggle>
+      <mat-button-toggle value="income">הכנסות ({{ incomeCount() }})</mat-button-toggle>
+    </mat-button-toggle-group>
+    <label class="search-box">
+      <mat-icon>search</mat-icon>
+      <input type="search" [(ngModel)]="search" placeholder="חיפוש ספק או תיאור" aria-label="חיפוש ספק או תיאור" />
+    </label>
+    <span class="chip chip-info filter-chip" *ngIf="categoryFilter !== undefined">
+      {{ category(categoryFilter)?.name ?? 'ללא קטגוריה' }}
+      <mat-icon (click)="categoryFilter = undefined">close</mat-icon>
+    </span>
+  </div>
+
+  <div class="list-container" *ngIf="visibleMerchants().length">
+    <app-list-row
+      *ngFor="let merchant of visibleMerchants()"
+      [icon]="merchantIcon(merchant)"
+      [iconGradient]="tab === 'income' ? 'success' : 'primary'"
+      [title]="merchant.name"
+      [subtitle]="merchantSubtitle(merchant)"
+      [value]="((merchant.totalAmount < 0 ? -merchant.totalAmount : merchant.totalAmount) | number: '1.0-0') + ' ₪'"
+      [valueColor]="tab === 'income' ? 'income' : 'expense'"
+      [badge]="merchantBadge(merchant)"
+      [badgeColor]="merchant.maaserCount ? 'active' : 'warning'"
+      [clickable]="true"
+      (rowClick)="openDetail(merchant)"
+    ></app-list-row>
+  </div>
+  <p class="panel-sub empty-list" *ngIf="!visibleMerchants().length">{{ search ? 'לא נמצא ספק שמתאים ל"' + search + '"' : 'אין ' + (tab === 'income' ? 'הכנסות' : 'הוצאות') + ' להצגה' }}</p>
+
+  <!-- לא נספרים -->
+  <div class="hidden-summary" *ngIf="result.hidden.length">
+    <button class="hidden-toggle" (click)="showHidden = !showHidden">
+      <mat-icon>{{ showHidden ? 'expand_less' : 'expand_more' }}</mat-icon>
+      <span>
+        לא נספר בחישוב:
+        <ng-container *ngIf="result.totals.cardPayments">תשלומי כרטיס {{ result.totals.cardPayments | number: '1.0-0' }} ₪ (הרכישות עצמן מופיעות למעלה לפי ספק)</ng-container>
+        <ng-container *ngIf="result.totals.cardPayments && result.totals.internalTransfers"> · </ng-container>
+        <ng-container *ngIf="result.totals.internalTransfers">העברות בין החשבונות שלך והשקעות {{ result.totals.internalTransfers | number: '1.0-0' }} ₪</ng-container>
+        <ng-container *ngIf="result.totals.offsets && (result.totals.cardPayments || result.totals.internalTransfers)"> · </ng-container>
+        <ng-container *ngIf="result.totals.offsets">הלוואות וכסף שעבר דרכך {{ result.totals.offsets | number: '1.0-0' }} ₪</ng-container>
+        <ng-container *ngIf="result.totals.loans && (result.totals.cardPayments || result.totals.internalTransfers || result.totals.offsets)"> · </ng-container>
+        <ng-container *ngIf="result.totals.loans">הלוואות והחזרים {{ result.totals.loans | number: '1.0-0' }} ₪</ng-container>
+        <ng-container *ngIf="result.totals.savings && (result.totals.cardPayments || result.totals.internalTransfers || result.totals.offsets || result.totals.loans)"> · </ng-container>
+        <ng-container *ngIf="result.totals.savings">הופקד לחיסכון {{ result.totals.savings | number: '1.0-0' }} ₪</ng-container>
+      </span>
+    </button>
+    <div class="hidden-list" *ngIf="showHidden">
+      <div class="hidden-row" *ngFor="let m of result.hidden">
+        <span class="hr-name">{{ m.name }}</span>
+        <span class="hr-note">{{ hiddenLabel(m) }}</span>
+        <span class="amount">{{ m.totalAmount | number: '1.0-0' }}</span>
+      </div>
+    </div>
+  </div>
+</ng-container>

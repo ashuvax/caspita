@@ -1,0 +1,48 @@
+<h2 mat-dialog-title>{{ editing ? 'עריכת הלוואה' : given ? 'הלוואה שנתתי' : 'הלוואה שלקחתי' }}</h2>
+
+<mat-dialog-content class="loan-body">
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>{{ given ? 'למי הלווית' : 'ממי לקחת (בנק, גמ"ח, אדם)' }}</mat-label>
+    <input matInput [(ngModel)]="counterparty" cdkFocusInitial />
+  </mat-form-field>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>סכום ההלוואה ₪</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="amount" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>תאריך ההלוואה</mat-label>
+      <input matInput type="date" [(ngModel)]="startDate" />
+    </mat-form-field>
+  </div>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ given ? 'מתי אמור להחזיר' : 'מועד סיום' }}</mat-label>
+      <input matInput type="date" [(ngModel)]="dueDate" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" *ngIf="!given">
+      <mat-label>יתרה לסילוק (אם ידועה)</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="remainingOverride" />
+      <mat-hint>לפי הבנק/הגמ"ח, כולל ריבית</mat-hint>
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>הערה (רשות)</mat-label>
+    <input matInput [(ngModel)]="note" />
+  </mat-form-field>
+
+  <p class="hint" *ngIf="given">
+    אחרי השמירה אפשר לשייך את ההעברה וההחזרים מהבנק, או לרשום החזר במזומן. הלוואה שנתתי וההחזרים שלה לא נספרים כהוצאה או כהכנסה.
+  </p>
+  <p class="hint" *ngIf="!given">
+    הסכום שקיבלת לא נספר כהכנסה. התשלומים החודשיים נספרים כהוצאה — זה כסף שיוצא כל חודש.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">ביטול</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="!valid() || saving">שמירה</button>
+</mat-dialog-actions>

@@ -1,0 +1,10 @@
+.cash-body {
+  padding: 8px 24px 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.direction { margin-bottom: 18px; align-self: flex-start; }
+.full { width: 100%; }
+.row { display: flex; gap: 12px; > * { flex: 1; } }
+.hint { font-size: 12px; color: var(--muted); margin: 0 0 12px; }

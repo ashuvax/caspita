@@ -1,0 +1,66 @@
+<h2 mat-dialog-title>{{ editing ? 'עריכת נייר' : 'נייר ערך חדש' }}</h2>
+
+<mat-dialog-content class="body">
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>היכן מוחזק</mat-label>
+      <input matInput [(ngModel)]="account" [matAutocomplete]="acc" placeholder="פסגות, בנק הפועלים" />
+      <mat-autocomplete #acc="matAutocomplete">
+        <mat-option *ngFor="let a of accounts" [value]="a">{{ a }}</mat-option>
+      </mat-autocomplete>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>שם</mat-label>
+      <input matInput [(ngModel)]="name" cdkFocusInitial />
+    </mat-form-field>
+  </div>
+
+  <mat-button-toggle-group [(ngModel)]="priceSource" class="source" hideSingleSelectionIndicator>
+    <mat-button-toggle value="yahoo">מחיר חי מהבורסה</mat-button-toggle>
+    <mat-button-toggle value="manual">מחיר ידני</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <div class="row">
+    <mat-form-field appearance="outline" *ngIf="priceSource === 'yahoo'">
+      <mat-label>סימול</mat-label>
+      <input matInput [(ngModel)]="symbol" placeholder="INTC, POLI.TA" />
+      <mat-hint>מניה בת"א — עם ‎.TA בסוף</mat-hint>
+    </mat-form-field>
+    <mat-form-field appearance="outline" *ngIf="priceSource === 'manual'">
+      <mat-label>מחיר ליחידה</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="manualPrice" />
+      <mat-hint>בשקלים או בדולרים — לא באגורות</mat-hint>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>מטבע</mat-label>
+      <mat-select [(ngModel)]="currency">
+        <mat-option value="ILS">שקל</mat-option>
+        <mat-option value="USD">דולר</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>כמות</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="quantity" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>עלות כוללת (רשות)</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="costBasis" />
+      <mat-hint>לחישוב רווח/הפסד, במטבע הנייר</mat-hint>
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>הערה (רשות)</mat-label>
+    <input matInput [(ngModel)]="note" />
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions>
+  <button mat-button class="danger" *ngIf="editing" (click)="remove()">{{ confirmDelete ? 'ללחוץ שוב למחיקה' : 'מחיקה' }}</button>
+  <span class="spacer"></span>
+  <button mat-button (click)="cancel()">ביטול</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="!valid() || saving">שמירה</button>
+</mat-dialog-actions>

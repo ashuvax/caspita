@@ -1,0 +1,50 @@
+.account-panel {
+  border: 1.5px solid transparent;
+  &.negative { border-color: var(--brick-soft); }
+}
+
+.account-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.balances {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  .bal {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    .bal-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .amount { font-size: 20px; }
+    .bal-date { font-size: 11px; color: var(--muted); }
+  }
+  .arrow { color: var(--line-strong); font-size: 18px; width: 18px; height: 18px; }
+}
+
+.month-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.kind-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.account-panel.negative { border-color: var(--brick-soft); }
+.balances .bal .amount { font-size: 22px; font-weight: 500; }
+.table-toggle { margin-bottom: 8px; }
+.month-chips .chip { font-weight: 500; }

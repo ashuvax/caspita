@@ -1,0 +1,115 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>חסכונות</h1>
+    <p class="header-sub">פיקדונות, קרנות השתלמות וחסכונות — כמה יש, כמה אפשר למשוך וכמה מופקד כל חודש</p>
+  </div>
+  <div class="header-controls">
+    <button class="add-btn" (click)="openDialog()"><mat-icon>add</mat-icon>חיסכון חדש</button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading">
+  <section class="summary" *ngIf="items.length">
+    <div class="sum-item">
+      <span class="sum-label">סה״כ בחסכונות</span>
+      <span class="sum-value"><span class="num">{{ totalValue() | number: '1.0-0' }}</span> <small>₪</small></span>
+    </div>
+    <div class="sum-item" *ngIf="totalWithdrawable() !== totalValue()">
+      <span class="sum-label">אפשר למשוך בפועל</span>
+      <span class="sum-value sm"><span class="num">{{ totalWithdrawable() | number: '1.0-0' }}</span> <small>₪</small></span>
+      <span class="sum-sub">אחרי ניכויים</span>
+    </div>
+    <div class="sum-item" *ngIf="totalMonthly() > 0">
+      <span class="sum-label">מופקד כל חודש מהבנק</span>
+      <span class="sum-value sm"><span class="num">{{ totalMonthly() | number: '1.0-0' }}</span> <small>₪</small></span>
+      <span class="sum-sub">לא נספר כהוצאה</span>
+    </div>
+  </section>
+
+  <div class="empty-state" *ngIf="!items.length">
+    <div class="empty-icon"><mat-icon>savings</mat-icon></div>
+    <p class="empty-title">אין חסכונות רשומים</p>
+    <p class="empty-sub">הוסיפו פיקדון, קרן השתלמות או חיסכון אחר עם היתרה מהדוח האחרון</p>
+  </div>
+
+  <div class="list">
+    <article class="sv" *ngFor="let s of items" [class.open]="expanded === s.id">
+      <button class="sv-head" (click)="toggle(s)" [attr.aria-expanded]="expanded === s.id">
+        <mat-icon class="sv-icon">{{ kindIcon[s.kind] }}</mat-icon>
+        <div class="sv-main">
+          <span class="sv-name">{{ s.name }}</span>
+          <span class="sv-meta">
+            {{ kindLabel[s.kind] }}
+            <ng-container *ngIf="s.monthlyDeposit"> · {{ s.monthlyDeposit | number: '1.0-0' }} ₪ בחודש</ng-container>
+            <ng-container *ngIf="s.liquidDate"> · {{ liquidNow(s) ? 'נזיל' : 'נזיל מ-' + (s.liquidDate | date: 'dd/MM/yy') }}</ng-container>
+          </span>
+        </div>
+        <div class="sv-value">
+          <span class="num">{{ s.value | number: '1.0-0' }}</span>
+          <small *ngIf="s.penaltyPct">למשיכה: <span class="num">{{ s.withdrawable | number: '1.0-0' }}</span> (−{{ s.penaltyPct }}%)</small>
+        </div>
+        <mat-icon class="sv-chevron">{{ expanded === s.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+
+      <p class="sv-basis">
+        <ng-container *ngIf="s.basedOnBalance">
+          יתרה <span class="num">{{ s.balance | number: '1.0-0' }}</span> ₪ נכון ל-{{ s.balanceDate | date: 'dd/MM/yy' }}<ng-container *ngIf="s.value !== s.balance"> + הפקדות מאז</ng-container>
+          <span class="stale" *ngIf="(staleDays(s) ?? 0) > 120"> · היתרה לא עודכנה {{ staleDays(s)! / 30 | number: '1.0-0' }} חודשים</span>
+        </ng-container>
+        <ng-container *ngIf="!s.basedOnBalance">סכום ההפקדות שנרשמו — לא הוזנה יתרה</ng-container>
+        <ng-container *ngIf="s.autoMatch"> · הפקדות מהבנק משויכות אוטומטית</ng-container>
+      </p>
+
+      <div class="sv-body" *ngIf="expanded === s.id">
+        <p class="note" *ngIf="s.note">{{ s.note }}</p>
+
+        <div class="mv" *ngFor="let m of s.movements.slice(0, 24)">
+          <span class="mv-date">{{ m.date | date: 'dd/MM/yy' }}</span>
+          <span class="mv-label">{{ m.label }} <small>{{ m.source === 'bank' ? 'מהבנק' : 'נרשם ידנית' }}</small></span>
+          <span class="mv-amount num" [class.out]="m.amount < 0">{{ m.amount | number: '1.0-0' }}</span>
+          <button class="icon-btn" (click)="removeMovement(m)" [matTooltip]="m.source === 'bank' ? 'בטל שיוך' : 'מחק'"><mat-icon>{{ m.source === 'bank' ? 'link_off' : 'delete' }}</mat-icon></button>
+        </div>
+        <p class="panel-sub" *ngIf="!s.movements.length">אין הפקדות רשומות.</p>
+
+        <div class="entry-form" *ngIf="draft?.savingsId === s.id && draft as d">
+          <mat-form-field appearance="outline">
+            <mat-label>תאריך</mat-label>
+            <input matInput type="date" [(ngModel)]="d.date" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ d.withdrawal ? 'סכום שנמשך ₪' : 'סכום שהופקד ₪' }}</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="d.amount" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="grow">
+            <mat-label>הערה</mat-label>
+            <input matInput [(ngModel)]="d.note" />
+          </mat-form-field>
+          <button class="add-btn" (click)="saveEntry()" [disabled]="!d.amount">שמירה</button>
+          <button class="ghost-btn" (click)="draft = null">ביטול</button>
+        </div>
+
+        <div class="candidates" *ngIf="candidates.get(s.id)?.length">
+          <h4>חיובים שאולי הם הפקדות לחיסכון הזה</h4>
+          <div class="mv" *ngFor="let c of candidates.get(s.id)">
+            <span class="mv-date">{{ c.date | date: 'dd/MM/yy' }}</span>
+            <span class="mv-label">{{ c.name }} <small>{{ c.accountName }}</small></span>
+            <span class="mv-amount num">{{ c.amount | number: '1.0-0' }}</span>
+            <button class="ghost-btn" (click)="link(s, c)"><mat-icon>link</mat-icon>שייך</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="ghost-btn" (click)="openDialog(s)"><mat-icon>edit</mat-icon>עדכון יתרה / עריכה</button>
+          <button class="ghost-btn" (click)="startEntry(s, false)"><mat-icon>add</mat-icon>הפקדה ידנית</button>
+          <button class="ghost-btn" (click)="startEntry(s, true)"><mat-icon>remove</mat-icon>משיכה</button>
+          <button class="ghost-btn danger" (click)="remove(s)"><mat-icon>delete</mat-icon>{{ confirmDelete === s.id ? 'ללחוץ שוב למחיקה' : 'מחיקה' }}</button>
+        </div>
+      </div>
+    </article>
+  </div>
+</ng-container>

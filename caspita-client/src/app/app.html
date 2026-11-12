@@ -1,0 +1,32 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-mark" aria-hidden="true">₪</span>
+      <span class="logo-text">כספיטה</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a *ngFor="let item of navItems" class="nav-item" [routerLink]="item.path" routerLinkActive="active">
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <span class="nav-label">{{ item.label }}</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="sync-btn" (click)="sync.sync()" [disabled]="(sync.status$ | async)?.running" matRipple>
+        <mat-icon [class.spinning]="(sync.status$ | async)?.running">sync</mat-icon>
+        <span>{{ (sync.status$ | async)?.running ? 'מסנכרן...' : 'סנכרן עכשיו' }}</span>
+      </button>
+      <div class="sync-meta" *ngIf="(sync.status$ | async)?.running">{{ syncProgress() }}</div>
+      <div class="sync-meta" *ngIf="!(sync.status$ | async)?.running && (sync.status$ | async)?.finishedAt as at">
+        סונכרן לאחרונה {{ at | date: 'dd/MM HH:mm' }}
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>

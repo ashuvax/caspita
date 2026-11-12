@@ -1,0 +1,20 @@
+.narrow { width: 120px; }
+
+tr.dim td { opacity: .65; }
+
+.amount-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  input {
+    width: 90px;
+    padding: 6px 8px;
+    border: 1.5px solid var(--pine-soft);
+    border-radius: 8px;
+    font: inherit;
+    direction: ltr;
+  }
+}
+
+.header-controls { gap: 10px; }

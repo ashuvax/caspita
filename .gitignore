@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.db
+caspita-client/dist/
+caspita-client/node_modules/
+data/
+.claude/
+*.db-journal

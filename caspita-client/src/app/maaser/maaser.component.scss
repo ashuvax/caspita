@@ -1,0 +1,25 @@
+.rules-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+
+  .panel { margin-bottom: 20px; }
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.grow { flex: 1; min-width: 180px; }
+
+.rule-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.chip-remove {
+  cursor: pointer;
+  opacity: .6;
+  &:hover { opacity: 1; }
+}
+
+.add-btn:disabled { opacity: .5; cursor: default; transform: none; }

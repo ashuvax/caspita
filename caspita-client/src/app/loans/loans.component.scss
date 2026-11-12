@@ -1,0 +1,128 @@
+.num { direction: ltr; unicode-bidi: isolate; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* ── סיכום ───────────────── */
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  border-radius: var(--radius);
+  background: var(--pine);
+  color: #fff;
+
+  .sum-main { display: flex; flex-direction: column; gap: 2px; }
+  .sum-label { font-size: 14px; color: #b9cec3; font-weight: 600; }
+  .sum-value { font-family: var(--font-num); font-size: 34px; font-weight: 500; small { font-size: 18px; color: #b9cec3; margin-inline-start: 4px; } }
+  .sum-sub { font-size: 13px; color: #b9cec3; }
+
+  .sum-side {
+    display: flex; align-items: center; gap: 10px; flex: 1; min-width: 240px;
+    padding: 12px 16px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, .08);
+    font-size: 15px; color: #f6d3ca;
+    mat-icon { color: #f6b8aa; }
+    &.neutral { color: #e6efe9; mat-icon { color: var(--gold-soft); } }
+  }
+}
+
+/* ── כרטיס הלוואה ───────────────── */
+.loans { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+.loan {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  border-inline-start: 4px solid var(--pine-soft);
+  padding: 4px 18px 14px;
+
+  &.status-overdue { border-inline-start-color: var(--brick); .lh-status { background: var(--brick-tint); color: var(--brick-dark); } .progress-fill { background: var(--brick); } }
+  &.status-repaid { border-inline-start-color: var(--leaf); opacity: .85; .lh-status { background: var(--leaf-tint); color: var(--leaf-dark); } .progress-fill { background: var(--leaf); } }
+}
+
+.loan-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 0 10px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+  cursor: pointer;
+
+  .lh-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .lh-name { font-size: 17px; font-weight: 600; color: var(--ink); }
+  .lh-meta { font-size: 13px; color: var(--muted); }
+  .lh-status { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--pine-tint); color: var(--pine-dark); }
+  .lh-remaining {
+    display: flex; flex-direction: column; align-items: flex-end; min-width: 80px;
+    .num { font-size: 22px; font-weight: 500; color: var(--ink); }
+    small { font-size: 12px; color: var(--muted); }
+  }
+  .lh-chevron { color: var(--muted); }
+
+  @media (max-width: 640px) {
+    flex-wrap: wrap;
+    .lh-main { flex-basis: 100%; }
+  }
+}
+
+.progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--paper);
+  overflow: hidden;
+  .progress-fill { display: block; height: 100%; border-radius: 999px; background: var(--pine); }
+}
+.progress-text { margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+.loan-body {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+
+  .note { margin: 0 0 10px; font-size: 14px; color: var(--ink-2); }
+  h4 { margin: 14px 0 4px; font-size: 14px; font-weight: 600; color: var(--muted); }
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  &:last-child { border-bottom: none; }
+
+  .e-date { width: 70px; flex-shrink: 0; font-family: var(--font-num); font-size: 13px; color: var(--muted); }
+  .e-kind { flex-shrink: 0; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--leaf-tint); color: var(--leaf-dark);
+    &.principal { background: var(--paper); color: var(--ink-2); } }
+  .e-label { flex: 1; min-width: 0; font-size: 14px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis;
+    small { display: block; font-size: 12px; color: var(--muted); } }
+  .e-amount { font-size: 15px; color: var(--ink); &.income { color: var(--leaf); } }
+}
+
+.candidates { margin-top: 4px; padding: 4px 12px; border-radius: var(--radius-sm); background: var(--gold-tint); }
+
+.pay-form {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px;
+  .mat-mdc-form-field { width: 150px; }
+  .grow { flex: 1; min-width: 160px; }
+}
+
+.loan-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.ghost-btn.danger:hover { border-color: var(--brick); color: var(--brick); background: var(--brick-tint); }
+
+.repaid-toggle { margin-bottom: 10px; }
+
+/* ── הצעות ───────────────── */
+.suggestions { margin-top: 8px; }
+.sug {
+  display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line);
+  &:last-child { border-bottom: none; }
+  .sug-date { width: 70px; font-family: var(--font-num); font-size: 13px; color: var(--muted); }
+  .sug-name { flex: 1; min-width: 0; font-size: 15px; color: var(--ink-2); }
+  .sug-amount { font-size: 15px; color: var(--ink); }
+}

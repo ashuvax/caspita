@@ -1,0 +1,105 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>לאורך זמן</h1>
+    <p class="header-sub">המגמות שלך — לא רק חודש בודד. ריחוף מעל גרף מראה את פרטי החודש</p>
+  </div>
+  <div class="header-controls">
+    <mat-button-toggle-group [value]="range" (change)="setRange($event.value)" hideSingleSelectionIndicator>
+      <mat-button-toggle [value]="6">חצי שנה</mat-button-toggle>
+      <mat-button-toggle [value]="12">שנה</mat-button-toggle>
+      <mat-button-toggle [value]="24">שנתיים</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading && result">
+  <!-- חודש רגיל -->
+  <section class="typical">
+    <div class="typical-text">
+      <h2>חודש רגיל אצלך</h2>
+      <p>
+        נכנסים <strong class="income"><span class="num">{{ result.summary.typicalIncome | number: '1.0-0' }}</span> ₪</strong>
+        ויוצאים <strong><span class="num">{{ result.summary.typicalExpenses | number: '1.0-0' }}</span> ₪</strong>.
+        <ng-container *ngIf="deficitMonths() as d">
+          <ng-container *ngIf="d.total">ב-{{ d.count }} מתוך {{ d.total }} החודשים האחרונים יצא יותר ממה שנכנס.</ng-container>
+        </ng-container>
+      </p>
+      <p class="muted">"רגיל" = החציון של החודשים שהסתיימו, כך שחודש חריג אחד לא מעוות את התמונה.</p>
+    </div>
+    <div class="typical-stats">
+      <div class="ts">
+        <span class="ts-label">אחוז חיסכון רגיל</span>
+        <span class="ts-value" [class.neg]="(result.summary.typicalSavingsRate ?? 0) < 0">
+          {{ result.summary.typicalSavingsRate !== null ? result.summary.typicalSavingsRate + '%' : '—' }}
+        </span>
+        <span class="ts-sub">מתוך ההכנסות</span>
+      </div>
+      <div class="ts" *ngIf="result.summary.balance !== null">
+        <span class="ts-label">יתרה בבנקים היום</span>
+        <span class="ts-value"><span class="num">{{ result.summary.balance | number: '1.0-0' }}</span></span>
+        <span class="ts-sub" *ngIf="result.summary.balanceChange !== null" [class.neg]="result.summary.balanceChange < 0">
+          {{ result.summary.balanceChange >= 0 ? '▲' : '▼' }} <span class="num">{{ (result.summary.balanceChange < 0 ? -result.summary.balanceChange : result.summary.balanceChange) | number: '1.0-0' }}</span> מאז {{ firstMonthLabel() }}
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- נכנס מול יצא -->
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>bar_chart</mat-icon>נכנס מול יצא</h3>
+    <p class="panel-sub">הפער בין העמודות הוא מה שנשאר. החודש הנוכחי חלש יותר — הוא עוד לא הסתיים.</p>
+    <app-month-chart [months]="months" [series]="flowSeries" [extra]="flowExtra" mode="bars" [partialLast]="true" [height]="240"></app-month-chart>
+  </section>
+
+  <div class="grid-2">
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>savings</mat-icon>כמה נשאר בכל חודש</h3>
+      <p class="panel-sub">ירוק — נשאר כסף. אדום — יצא יותר ממה שנכנס.</p>
+      <app-month-chart [months]="months" [series]="netSeries" [extra]="netExtra" mode="signed" [partialLast]="true" [height]="190" [compact]="true"></app-month-chart>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>account_balance</mat-icon>יתרה בבנקים בסוף כל חודש</h3>
+      <p class="panel-sub">סך כל חשבונות הבנק, משוחזר מהתנועות</p>
+      <app-month-chart [months]="months" [series]="balanceSeries" mode="line" [height]="190" [compact]="true"></app-month-chart>
+    </section>
+  </div>
+
+  <!-- קטגוריות -->
+  <section class="panel" *ngIf="result.categories.length">
+    <h3 class="panel-title"><mat-icon>donut_small</mat-icon>הקטגוריות הגדולות לאורך זמן</h3>
+    <p class="panel-sub">כל עמודה היא חודש (הישן מימין). הקו המקווקו הוא חודש רגיל. הסכום הגדול הוא {{ lastCompleteLabel() }}.</p>
+    <div class="cats">
+      <div class="cat" *ngFor="let c of result.categories" [class]="'trend-' + trend(c)">
+        <div class="cat-head">
+          <mat-icon>{{ categoryIcon(c.categoryId) }}</mat-icon>
+          <span class="cat-name">{{ categoryName(c.categoryId) }}</span>
+        </div>
+        <div class="cat-body">
+          <div class="cat-nums">
+            <span class="cat-value num">{{ lastComplete(c) | number: '1.0-0' }}</span>
+            <span class="cat-typical">רגיל <span class="num">{{ c.typical | number: '1.0-0' }}</span></span>
+          </div>
+          <svg class="spark" [attr.viewBox]="'0 0 ' + SPARK_W + ' ' + SPARK_H" preserveAspectRatio="none" aria-hidden="true">
+            <ng-container *ngIf="sparks.get(c.categoryId) as s">
+              <rect *ngFor="let b of s.bars" [attr.x]="b.x" [attr.y]="b.y" [attr.width]="SPARK_W / months.length - 2" [attr.height]="b.h" rx="1.5" [class.last]="b.last" />
+              <line *ngIf="s.typicalY !== null" class="typical-line" x1="0" [attr.x2]="SPARK_W" [attr.y1]="s.typicalY" [attr.y2]="s.typicalY" />
+            </ng-container>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- מעשרות -->
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>volunteer_activism</mat-icon>מעשרות — כמה נשאר לתת</h3>
+    <p class="panel-sub">היתרה המצטברת בסוף כל חודש. ירידה = נתת יותר מהחובה של אותו חודש.</p>
+    <app-month-chart [months]="months" [series]="maaserSeries" [extra]="maaserExtra" mode="line" [height]="170"></app-month-chart>
+  </section>
+</ng-container>

@@ -1,0 +1,70 @@
+:host { display: block; }
+
+.legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+}
+
+.chart {
+  position: relative;
+  font-family: var(--font-num);
+  svg { display: block; width: 100%; height: 100%; overflow: visible; }
+}
+
+.grid line { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.zero { stroke: var(--line-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.col-hover { fill: var(--paper); }
+.bar { transition: opacity .15s; &.partial { opacity: .45; } }
+.area { opacity: .1; }
+.line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.hit { fill: transparent; cursor: default; }
+
+.y-label, .x-label {
+  position: absolute;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.y-label { left: 0; width: 46px; text-align: left; direction: ltr; transform: translateY(-50%); }
+.x-label { bottom: 0; transform: translateX(50%); &.active { color: var(--ink); font-weight: 600; } }
+
+.dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px -4px 0 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+  &.big { width: 12px; height: 12px; margin: -6px -6px 0 0; }
+}
+
+.tip {
+  position: absolute;
+  top: 0;
+  min-width: 170px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 2;
+  transform: translateX(-18px);
+  &.flip { transform: translateX(calc(100% + 18px)); }
+
+  .tip-head { font-weight: 700; margin-bottom: 4px; }
+  .tip-row { display: flex; justify-content: space-between; gap: 14px; color: #d5ddd9;
+    i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-inline-end: 6px; } }
+  .tip-extra { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, .15); color: #fff; }
+  .num { direction: ltr; font-family: var(--font-num); font-variant-numeric: tabular-nums; color: #fff; }
+}

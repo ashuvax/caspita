@@ -1,0 +1,65 @@
+<div class="legend" *ngIf="mode === 'bars' && series.length > 1">
+  <span class="legend-item" *ngFor="let s of series"><i [style.background]="s.color"></i>{{ s.label }}</span>
+</div>
+
+<div class="chart" [style.height.px]="height" (mouseleave)="hovered = null">
+  <svg [attr.viewBox]="'0 0 ' + W + ' ' + height" preserveAspectRatio="none" role="img" [attr.aria-label]="series[0]?.label">
+    <g class="grid">
+      <line *ngFor="let t of yTicks" [attr.x1]="plotLeft" [attr.x2]="plotRight" [attr.y1]="t.pos" [attr.y2]="t.pos" />
+    </g>
+
+    <rect
+      *ngIf="hovered"
+      class="col-hover"
+      [attr.x]="hovered.hitX"
+      [attr.y]="plotTop"
+      [attr.width]="hovered.hitW"
+      [attr.height]="plotBottom - plotTop"
+    />
+
+    <path *ngFor="let b of bars" class="bar" [attr.d]="b.d" [style.fill]="b.color" [class.partial]="b.partial" />
+
+    <ng-container *ngIf="mode === 'line'">
+      <path class="area" [attr.d]="areaPath" [style.fill]="series[0]?.color" />
+      <path class="line" [attr.d]="linePath" [style.stroke]="series[0]?.color" />
+    </ng-container>
+
+    <line class="zero" [attr.x1]="plotLeft" [attr.x2]="plotRight" [attr.y1]="zeroY" [attr.y2]="zeroY" />
+
+    <rect
+      *ngFor="let c of columns"
+      class="hit"
+      [attr.x]="c.hitX"
+      [attr.y]="plotTop"
+      [attr.width]="c.hitW"
+      [attr.height]="plotBottom - plotTop"
+      (mouseenter)="hovered = c"
+    />
+  </svg>
+
+  <span class="y-label" *ngFor="let t of yTicks" [style.top.%]="(t.pos / height) * 100">{{ t.label }}</span>
+  <ng-container *ngFor="let c of columns"><span class="x-label" *ngIf="c.label || hovered === c" [style.right.%]="colRight(c)" [class.active]="hovered === c">{{ c.label || shortName(c) }}</span></ng-container>
+
+  <!-- נקודות על הקו (HTML כדי שלא יימתחו) -->
+  <ng-container *ngIf="mode === 'line'">
+    <ng-container *ngFor="let c of columns">
+      <span
+        *ngIf="dotTop(c) as top"
+        class="dot"
+        [class.big]="hovered === c"
+        [style.right.%]="colRight(c)"
+        [style.top.%]="top"
+        [style.background]="series[0]?.color"
+      ></span>
+    </ng-container>
+  </ng-container>
+
+  <div class="tip" *ngIf="hovered as c" [class.flip]="flip(c)" [style.right.%]="colRight(c)">
+    <div class="tip-head">{{ monthTitle(c) }}</div>
+    <div class="tip-row" *ngFor="let s of series">
+      <span><i *ngIf="mode === 'bars'" [style.background]="s.color"></i>{{ s.label }}</span>
+      <span class="num">{{ value(s, c) !== null ? (value(s, c) | number: '1.0-0') + ' ' + unit : '—' }}</span>
+    </div>
+    <div class="tip-extra" *ngIf="extra[c.index]">{{ extra[c.index] }}</div>
+  </div>
+</div>

@@ -1,0 +1,63 @@
+<div class="chart" (mouseleave)="hovered = null">
+  <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" preserveAspectRatio="none" role="img" aria-label="גרף יתרה צפויה לאורך התקופה">
+    <defs>
+      <clipPath [attr.id]="'pos-' + startDate + endDate"><rect [attr.x]="0" [attr.y]="0" [attr.width]="W" [attr.height]="zeroY" /></clipPath>
+      <clipPath [attr.id]="'neg-' + startDate + endDate"><rect [attr.x]="0" [attr.y]="zeroY" [attr.width]="W" [attr.height]="H - zeroY" /></clipPath>
+    </defs>
+
+    <g class="grid">
+      <line *ngFor="let t of yTicks" [attr.x1]="plotLeft" [attr.x2]="plotRight" [attr.y1]="t.pos" [attr.y2]="t.pos" />
+      <line *ngFor="let t of xTicks" class="month" [attr.x1]="t.pos" [attr.x2]="t.pos" [attr.y1]="plotTop" [attr.y2]="plotBottom" />
+    </g>
+
+    <path class="area pos" [attr.d]="areaPath" [attr.clip-path]="'url(#pos-' + startDate + endDate + ')'" />
+    <path class="area neg" [attr.d]="areaPath" [attr.clip-path]="'url(#neg-' + startDate + endDate + ')'" />
+    <line class="zero" [attr.x1]="plotLeft" [attr.x2]="plotRight" [attr.y1]="zeroY" [attr.y2]="zeroY" />
+    <path class="line pos" [attr.d]="linePath" [attr.clip-path]="'url(#pos-' + startDate + endDate + ')'" />
+    <path class="line neg" [attr.d]="linePath" [attr.clip-path]="'url(#neg-' + startDate + endDate + ')'" />
+
+    <line *ngIf="hovered" class="crosshair" [attr.x1]="hovered.x" [attr.x2]="hovered.x" [attr.y1]="plotTop" [attr.y2]="plotBottom" />
+
+    <rect
+      *ngFor="let p of points"
+      class="hit"
+      [attr.x]="p.hitStart"
+      [attr.y]="plotTop"
+      [attr.width]="p.hitWidth"
+      [attr.height]="plotBottom - plotTop"
+      (mouseenter)="hovered = p"
+    />
+  </svg>
+
+  <!-- תוויות ונקודות ב-HTML כדי שלא יימתחו עם ה-SVG -->
+  <span class="y-label" *ngFor="let t of yTicks" [style.top.%]="(t.pos / H) * 100">{{ t.label }}</span>
+  <span class="x-label" *ngFor="let t of xTicks" [style.right.%]="((W - t.pos) / W) * 100">{{ t.label }}</span>
+  <span class="x-label start" [style.right.%]="((W - plotRight) / W) * 100">היום</span>
+
+  <span
+    *ngIf="minPoint && minPoint.balance < 0 && minPoint !== hovered"
+    class="dot min"
+    [style.right.%]="((W - minPoint.x) / W) * 100"
+    [style.top.%]="(minPoint.y / H) * 100"
+  ></span>
+  <span
+    *ngIf="minPoint && minPoint.balance < 0 && minPoint !== hovered"
+    class="min-label"
+    [style.right.%]="((W - minPoint.x) / W) * 100"
+    [style.top.%]="(minPoint.y / H) * 100"
+  >{{ minPoint.balance | number: '1.0-0' }}</span>
+
+  <ng-container *ngIf="hovered as p">
+    <span class="dot" [class.neg]="p.balance < 0" [style.right.%]="tipRight(p)" [style.top.%]="(p.y / H) * 100"></span>
+    <div class="tip" [class.flip]="tipFlip(p)" [style.right.%]="tipRight(p)">
+      <div class="tip-head">
+        <span>{{ p.date | date: 'dd/MM' }}</span>
+        <span class="tip-bal" [class.neg]="p.balance < 0">יתרה <span class="num">{{ p.balance | number: '1.0-0' }}</span></span>
+      </div>
+      <div class="tip-row" *ngFor="let e of p.events">
+        <span class="tip-label">{{ e.label }}</span>
+        <span class="num">{{ e.amount | number: '1.0-0' }}</span>
+      </div>
+    </div>
+  </ng-container>
+</div>

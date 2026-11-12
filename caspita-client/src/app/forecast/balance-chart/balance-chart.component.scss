@@ -1,0 +1,80 @@
+:host { display: block; }
+
+.chart {
+  position: relative;
+  height: 190px;
+  margin: 6px 0 18px;
+  font-family: var(--font-num);
+
+  svg { display: block; width: 100%; height: 100%; overflow: visible; }
+}
+
+.grid line { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.grid line.month { stroke-dasharray: 3 4; }
+
+.area.pos { fill: var(--pine-tint); }
+.area.neg { fill: var(--brick-tint); }
+.zero { stroke: var(--ink-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.line { fill: none; stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.line.pos { stroke: var(--pine); }
+.line.neg { stroke: var(--brick); }
+.crosshair { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.hit { fill: transparent; cursor: crosshair; }
+
+.y-label, .x-label {
+  position: absolute;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.y-label { left: 0; transform: translateY(-50%); direction: ltr; width: 50px; text-align: left; }
+.x-label { bottom: 0; transform: translateX(50%); &.start { transform: none; } }
+
+.dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px -5px 0 0;
+  border-radius: 50%;
+  background: var(--pine);
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+  &.neg, &.min { background: var(--brick); }
+}
+
+.min-label {
+  position: absolute;
+  transform: translate(50%, 8px);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brick-dark);
+  direction: ltr;
+  pointer-events: none;
+}
+
+.tip {
+  position: absolute;
+  top: 0;
+  min-width: 190px;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 2;
+
+  /* ברירת מחדל: משמאל לנקודה; קרוב לקצה השמאלי — מתהפך לימין */
+  transform: translateX(-12px);
+  &.flip { transform: translateX(calc(100% + 12px)); }
+
+  .tip-head { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; margin-bottom: 4px; }
+  .tip-bal.neg { color: #f6b8aa; }
+  .tip-row { display: flex; justify-content: space-between; gap: 12px; color: #cfd8d3; }
+  .tip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .num { direction: ltr; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+}

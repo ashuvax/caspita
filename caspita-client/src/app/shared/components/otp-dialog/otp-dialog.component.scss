@@ -1,0 +1,61 @@
+.otp-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 24px 16px;
+
+  .otp-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--pine-tint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    mat-icon { color: var(--pine); font-size: 22px; width: 22px; height: 22px; }
+  }
+
+  .otp-title-block {
+    h2 { margin: 0 0 3px; font-size: 17px; font-weight: 700; color: var(--ink); }
+    p  { margin: 0; font-size: 13px; color: var(--muted); }
+  }
+}
+
+.otp-body {
+  padding: 8px 24px 16px !important;
+
+  .otp-field { width: 100%; }
+}
+
+.otp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 24px 20px !important;
+
+  button {
+    padding: 8px 22px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel {
+    background: var(--line);
+    color: var(--muted);
+    &:hover { background: var(--line); }
+  }
+
+  .btn-submit {
+    background: var(--pine);
+    color: #fff;
+    &:hover { opacity: 0.9; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+}
+
+.otp-retry { color: var(--gold-dark) !important; font-weight: 600; }

@@ -1,0 +1,133 @@
+.num { direction: ltr; unicode-bidi: isolate; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* ── חשבונות ───────────────── */
+.accounts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.acc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--leaf);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .15s;
+
+  &:hover { border-color: var(--line-strong); }
+  &.status-tight { border-top-color: var(--gold); }
+  &.status-bad { border-top-color: var(--brick); background: var(--brick-tint); border-color: var(--brick-soft); }
+
+  .acc-name { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .acc-balance {
+    font-family: var(--font-num); font-size: 30px; font-weight: 500; color: var(--ink); letter-spacing: -0.5px;
+    small { font-size: 16px; color: var(--muted); margin-inline-start: 4px; }
+  }
+  .acc-low {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2);
+    mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--leaf); }
+  }
+  &.status-tight .acc-low mat-icon { color: var(--gold); }
+  &.status-bad .acc-low { color: var(--brick-dark); font-weight: 600; mat-icon { color: var(--brick); } }
+
+  &.acc-total { border-top-color: var(--pine); background: var(--pine); border-color: var(--pine);
+    .acc-name { color: #b9cec3; } .acc-balance { color: #fff; small { color: #b9cec3; } } }
+}
+
+/* ── רשת ───────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+  .panel { margin-bottom: 0; min-width: 0; }
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.ghost-btn { text-decoration: none; margin-top: 12px; }
+
+/* ── תשומת לב ───────────────── */
+.attention {
+  .panel-title { margin-bottom: 10px; }
+  .att {
+    display: flex; align-items: center; gap: 10px; padding: 10px 4px;
+    border-bottom: 1px solid var(--line); color: var(--ink-2); text-decoration: none; font-size: 15px;
+    &:last-child { border-bottom: none; }
+    &:hover .att-action { text-decoration: underline; }
+
+    mat-icon { flex-shrink: 0; font-size: 18px; width: 32px; height: 32px; line-height: 32px; text-align: center; border-radius: 50%; background: var(--pine-tint); color: var(--pine); }
+    .att-text { flex: 1; }
+    .att-action { flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--pine); }
+    &.tone-bad { color: var(--ink); mat-icon { background: var(--brick-tint); color: var(--brick); } .att-action { color: var(--brick-dark); } }
+    &.tone-warn mat-icon { background: var(--gold-tint); color: var(--gold-dark); }
+  }
+}
+
+/* ── החודש ───────────────── */
+.month {
+  .m-row {
+    display: flex; align-items: baseline; gap: 10px; padding: 6px 0;
+    .m-label { width: 60px; font-size: 15px; color: var(--muted); font-weight: 600; }
+    .m-value { flex: 1; font-family: var(--font-num); font-size: 24px; font-weight: 500; color: var(--ink); &.income { color: var(--leaf); } }
+    .m-delta { font-size: 13px; color: var(--muted); &.bad { color: var(--brick); font-weight: 600; } }
+  }
+  .m-net { margin-top: 4px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--pine-tint);
+    .m-value { color: var(--pine-dark); font-weight: 600; }
+    &.negative { background: var(--brick-tint); .m-value { color: var(--brick-dark); } } }
+  .m-insight { margin: 12px 0 0; font-size: 14px; color: var(--ink-2); }
+}
+
+/* ── יורד בקרוב ───────────────── */
+.upcoming {
+  .up-row {
+    display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line);
+    &:last-child { border-bottom: none; }
+  }
+  .up-date { width: 44px; flex-shrink: 0; font-family: var(--font-num); font-size: 14px; color: var(--muted); }
+  .up-label { flex: 1; min-width: 0; font-size: 15px; color: var(--ink-2);
+    small { display: block; font-size: 12px; color: var(--muted); } }
+  .up-amount { font-size: 15px; font-weight: 500; color: var(--ink); &.income { color: var(--leaf); } }
+}
+
+/* ── מעשרות ───────────────── */
+.maaser {
+  .ma-main { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 4px; }
+  .ma-value { font-size: 32px; font-weight: 500; color: var(--gold-dark); }
+  .ma-label { font-size: 15px; color: var(--ink-2); }
+}
+
+/* ── שווי נקי ───────────────── */
+.networth {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  background: var(--pine);
+  color: #fff;
+
+  .nw-main { display: flex; flex-direction: column; gap: 2px; min-width: 200px; }
+  .nw-label { font-size: 14px; color: #b9cec3; font-weight: 600; }
+  .nw-value { font-family: var(--font-num); font-size: 34px; font-weight: 500; &.neg { color: #f6b8aa; }
+    small { font-size: 18px; color: #b9cec3; margin-inline-start: 4px; } }
+  .nw-sub { font-size: 13px; color: #9fbaab; }
+
+  .nw-parts { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; }
+  .nw-part {
+    display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; min-width: 110px;
+    border-radius: var(--radius-sm); background: rgba(255, 255, 255, .08); color: #fff; text-decoration: none;
+    span { font-size: 13px; color: #b9cec3; }
+    strong { font-size: 18px; font-weight: 500; }
+    &:hover { background: rgba(255, 255, 255, .14); }
+    &.debt strong { color: #f6b8aa; }
+  }
+}

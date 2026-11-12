@@ -1,0 +1,11 @@
+.loan-body {
+  padding: 8px 24px 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: min(440px, 80vw);
+}
+
+.full { width: 100%; }
+.row { display: flex; gap: 12px; > * { flex: 1; min-width: 0; } }
+.hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; }

@@ -1,0 +1,163 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>{{ given ? 'הלוואות שנתתי' : 'הלוואות שלי' }}</h1>
+    <p class="header-sub">{{ given ? 'כסף שהלווית — כמה חזר, כמה עוד חייבים לך ומתי' : 'הלוואות שלקחת — כמה שולם, כמה נשאר ומה יורד כל חודש' }}</p>
+  </div>
+  <div class="header-controls">
+    <button class="add-btn" (click)="openDialog()"><mat-icon>add</mat-icon>{{ given ? 'הלוואה שנתתי' : 'הלוואה שלקחתי' }}</button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading">
+  <!-- סיכום -->
+  <section class="summary" *ngIf="loans.length">
+    <div class="sum-main">
+      <span class="sum-label">{{ given ? 'עוד חייבים לך' : 'נשאר לך לשלם' }}</span>
+      <span class="sum-value"><span class="num">{{ totalRemaining() | number: '1.0-0' }}</span> <small>₪</small></span>
+      <span class="sum-sub">{{ active().length }} {{ active().length === 1 ? 'הלוואה פתוחה' : 'הלוואות פתוחות' }}</span>
+    </div>
+    <div class="sum-side" *ngIf="given && overdue().length">
+      <mat-icon>schedule</mat-icon>
+      <span>
+        <strong>{{ overdue().length === 1 ? 'הלוואה אחת באיחור' : overdue().length + ' הלוואות באיחור' }}</strong>
+        — <span class="num">{{ overdueRemaining() | number: '1.0-0' }}</span> ₪ שהיו אמורים לחזור
+      </span>
+    </div>
+    <div class="sum-side neutral" *ngIf="!given && totalMonthly() > 0">
+      <mat-icon>event_repeat</mat-icon>
+      <span>יורד כל חודש על הלוואות: <strong class="num">{{ totalMonthly() | number: '1.0-0' }}</strong> ₪</span>
+    </div>
+  </section>
+
+  <!-- ריק -->
+  <div class="empty-state" *ngIf="!loans.length">
+    <div class="empty-icon"><mat-icon>handshake</mat-icon></div>
+    <p class="empty-title">{{ given ? 'אין הלוואות שנתת' : 'אין הלוואות רשומות' }}</p>
+    <p class="empty-sub">הוסיפו הלוואה, או בחרו מהתנועות שזוהו למטה</p>
+  </div>
+
+  <!-- הלוואות -->
+  <div class="loans">
+    <ng-container *ngFor="let l of active()">
+      <ng-container *ngTemplateOutlet="loanCard; context: { $implicit: l }"></ng-container>
+    </ng-container>
+  </div>
+
+  <button class="ghost-btn repaid-toggle" *ngIf="repaid().length" (click)="showRepaid = !showRepaid">
+    <mat-icon>{{ showRepaid ? 'expand_less' : 'expand_more' }}</mat-icon>
+    {{ given ? 'הוחזרו' : 'שולמו' }} ({{ repaid().length }})
+  </button>
+  <div class="loans" *ngIf="showRepaid">
+    <ng-container *ngFor="let l of repaid()">
+      <ng-container *ngTemplateOutlet="loanCard; context: { $implicit: l }"></ng-container>
+    </ng-container>
+  </div>
+
+  <!-- הצעות -->
+  <section class="panel suggestions" *ngIf="suggestions.length">
+    <h3 class="panel-title"><mat-icon>search</mat-icon>תנועות שנראות כמו {{ given ? 'הלוואה שנתת' : 'הלוואה שלקחת' }}</h3>
+    <p class="panel-sub">{{ given ? 'כתוב בהן "הלוואה" והן עוד לא רשומות.' : 'הלוואות שנכנסו, וחיובים חודשיים קבועים שנראים כמו החזר הלוואה.' }} אם זו באמת הלוואה — הוסיפו אותה בלחיצה{{ given ? '' : ' (את סכום ההלוואה המקורי ממלאים ידנית)' }}.</p>
+    <div class="sug" *ngFor="let s of suggestions">
+      <span class="sug-date">{{ s.date | date: 'dd/MM/yy' }}</span>
+      <span class="sug-name">{{ s.counterparty }}</span>
+      <span class="sug-amount" *ngIf="!s.monthly"><span class="num">{{ s.amount | number: '1.0-0' }}</span> ₪</span>
+      <span class="sug-amount" *ngIf="s.monthly"><span class="num">{{ s.monthly | number: '1.0-0' }}</span> ₪ בחודש</span>
+      <button class="ghost-btn" (click)="fromSuggestion(s)"><mat-icon>add</mat-icon>הוספה</button>
+    </div>
+  </section>
+</ng-container>
+
+<ng-template #loanCard let-l>
+  <article class="loan" [class]="'loan status-' + l.status" [class.open]="expanded === l.id">
+    <button class="loan-head" (click)="toggle(l)" [attr.aria-expanded]="expanded === l.id">
+      <div class="lh-main">
+        <span class="lh-name">{{ l.counterparty }}</span>
+        <span class="lh-meta">
+          {{ l.amount | number: '1.0-0' }} ₪
+          <ng-container *ngIf="l.startDate"> · מ-{{ l.startDate | date: 'dd/MM/yy' }}</ng-container>
+          <ng-container *ngIf="l.dueDate"> · {{ given ? 'להחזיר עד' : 'עד' }} {{ l.dueDate | date: 'dd/MM/yy' }}</ng-container>
+          <ng-container *ngIf="l.monthlyPayment"> · {{ l.monthlyPayment | number: '1.0-0' }} ₪ בחודש</ng-container>
+        </span>
+      </div>
+      <span class="lh-status">{{ statusText(l) }}</span>
+      <div class="lh-remaining">
+        <span class="num">{{ l.remaining | number: '1.0-0' }}</span>
+        <small>{{ l.status === 'repaid' ? '' : 'נשאר' }}</small>
+      </div>
+      <mat-icon class="lh-chevron">{{ expanded === l.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+    </button>
+
+    <div class="progress" [attr.aria-label]="'שולם ' + (l.paid | number: '1.0-0') + ' ₪'">
+      <span class="progress-fill" [style.width.%]="paidPct(l)"></span>
+    </div>
+    <div class="progress-text">
+      {{ given ? 'הוחזר' : 'שולם' }} <span class="num">{{ l.paid | number: '1.0-0' }}</span> ₪
+      <ng-container *ngIf="!given && l.remainingOverride !== null"> · יתרה לפי הבנק</ng-container>
+      <ng-container *ngIf="l.autoMatch"> · תשלומים חדשים משויכים אוטומטית</ng-container>
+    </div>
+
+    <div class="loan-body" *ngIf="expanded === l.id">
+      <p class="note" *ngIf="l.note">{{ l.note }}</p>
+
+      <!-- תנועות -->
+      <div class="entries" *ngIf="l.entries.length">
+        <div class="entry" *ngFor="let e of l.entries">
+          <span class="e-date">{{ e.date | date: 'dd/MM/yy' }}</span>
+          <span class="e-kind" [class.principal]="e.kind === 'principal'">{{ entryLabel(e) }}</span>
+          <span class="e-label">
+            {{ e.label }}
+            <small>{{ e.source === 'bank' ? 'מהבנק' : 'נרשם ידנית' }}</small>
+          </span>
+          <span class="e-amount num" [class.income]="e.amount > 0">{{ e.amount | number: '1.0-0' }}</span>
+          <button class="icon-btn" (click)="removeEntry(e)" [matTooltip]="e.source === 'bank' ? 'בטל שיוך' : 'מחק'"><mat-icon>{{ e.source === 'bank' ? 'link_off' : 'delete' }}</mat-icon></button>
+        </div>
+      </div>
+      <p class="panel-sub" *ngIf="!l.entries.length">עוד לא שויכו תנועות להלוואה הזו.</p>
+
+      <!-- רישום ידני -->
+      <div class="pay-form" *ngIf="payment?.loanId === l.id && payment as p">
+        <mat-form-field appearance="outline">
+          <mat-label>תאריך</mat-label>
+          <input matInput type="date" [(ngModel)]="p.draft.date" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>סכום ₪</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="p.draft.amount" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="grow">
+          <mat-label>הערה</mat-label>
+          <input matInput [(ngModel)]="p.draft.note" placeholder="לדוגמה: במזומן" />
+        </mat-form-field>
+        <button class="add-btn" (click)="savePayment()" [disabled]="!p.draft.amount">שמירה</button>
+        <button class="ghost-btn" (click)="payment = null">ביטול</button>
+      </div>
+
+      <!-- הצעות שיוך -->
+      <div class="candidates" *ngIf="candidates.get(l.id)?.length">
+        <h4>תנועות שאולי שייכות להלוואה הזו</h4>
+        <div class="entry" *ngFor="let c of candidates.get(l.id)">
+          <span class="e-date">{{ c.date | date: 'dd/MM/yy' }}</span>
+          <span class="e-label">
+            {{ c.name }}
+            <small>{{ c.accountName }} · {{ c.reason }}</small>
+          </span>
+          <span class="e-amount num" [class.income]="c.amount > 0">{{ c.amount | number: '1.0-0' }}</span>
+          <button class="ghost-btn" (click)="link(l, c)"><mat-icon>link</mat-icon>שייך</button>
+        </div>
+      </div>
+
+      <div class="loan-actions">
+        <button class="ghost-btn" *ngIf="l.status !== 'repaid'" (click)="startPayment(l)"><mat-icon>payments</mat-icon>{{ given ? 'רישום החזר ידני' : 'רישום תשלום ידני' }}</button>
+        <button class="ghost-btn" (click)="openDialog({ loan: l })"><mat-icon>edit</mat-icon>עריכה</button>
+        <button class="ghost-btn" *ngIf="!l.closed && l.status !== 'repaid'" (click)="setClosed(l, true)"><mat-icon>task_alt</mat-icon>סמן כסגורה</button>
+        <button class="ghost-btn" *ngIf="l.closed" (click)="setClosed(l, false)"><mat-icon>undo</mat-icon>פתח מחדש</button>
+        <button class="ghost-btn danger" (click)="remove(l)"><mat-icon>delete</mat-icon>{{ confirmDelete === l.id ? 'ללחוץ שוב למחיקה' : 'מחיקה' }}</button>
+      </div>
+    </div>
+  </article>
+</ng-template>

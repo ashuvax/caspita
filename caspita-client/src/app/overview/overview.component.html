@@ -1,0 +1,109 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>מה המצב</h1>
+    <p class="header-sub">{{ today | date: 'EEEE, d בMMMM' }} — הכסף שלך במבט אחד</p>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading && forecast && month">
+  <!-- שווי נקי -->
+  <section class="networth" *ngIf="netWorth && (netWorth.savings || netWorth.investments || netWorth.debts)">
+    <div class="nw-main">
+      <span class="nw-label">השווי הנקי שלך</span>
+      <span class="nw-value" [class.neg]="netWorth.net < 0"><span class="num">{{ netWorth.net | number: '1.0-0' }}</span> <small>₪</small></span>
+      <span class="nw-sub">כל מה שיש, פחות כל מה שחייבים{{ netWorth.debts > 100000 ? ' · בלי שווי הדירה עצמה' : '' }}</span>
+    </div>
+    <div class="nw-parts">
+      <a class="nw-part" routerLink="/forecast"><span>בבנק</span><strong class="num">{{ netWorth.bank | number: '1.0-0' }}</strong></a>
+      <a class="nw-part" routerLink="/savings" *ngIf="netWorth.savings"><span>חסכונות</span><strong class="num">{{ netWorth.savings | number: '1.0-0' }}</strong></a>
+      <a class="nw-part" routerLink="/investments" *ngIf="netWorth.investments"><span>השקעות</span><strong class="num">{{ netWorth.investments | number: '1.0-0' }}</strong></a>
+      <a class="nw-part" routerLink="/loans/given" *ngIf="netWorth.owedToMe"><span>חייבים לך</span><strong class="num">{{ netWorth.owedToMe | number: '1.0-0' }}</strong></a>
+      <a class="nw-part debt" routerLink="/loans/taken" *ngIf="netWorth.debts"><span>הלוואות ומשכנתא</span><strong class="num">−{{ netWorth.debts | number: '1.0-0' }}</strong></a>
+    </div>
+  </section>
+
+  <!-- חשבונות -->
+  <section class="accounts">
+    <a class="acc" *ngFor="let a of forecast.accounts" routerLink="/forecast" [class]="'acc status-' + accountStatus(a)">
+      <span class="acc-name">{{ a.accountName }}</span>
+      <span class="acc-balance"><span class="num">{{ a.balance !== null ? (a.balance | number: '1.0-0') : '—' }}</span> <small>₪</small></span>
+      <span class="acc-low" *ngIf="a.minBalance !== null && a.minBalanceDate">
+        <mat-icon>{{ accountStatus(a) === 'ok' ? 'check_circle' : 'warning' }}</mat-icon>
+        <ng-container *ngIf="accountStatus(a) === 'bad'">יירד למינוס ב-{{ a.minBalanceDate | date: 'dd/MM' }}: <span class="num">{{ a.minBalance | number: '1.0-0' }}</span></ng-container>
+        <ng-container *ngIf="accountStatus(a) !== 'bad'">הכי נמוך עד סוף החודש: <span class="num">{{ a.minBalance | number: '1.0-0' }}</span></ng-container>
+      </span>
+    </a>
+    <div class="acc acc-total" *ngIf="forecast.accounts.length > 1 && totalBalance() !== null">
+      <span class="acc-name">סה״כ בבנקים</span>
+      <span class="acc-balance"><span class="num">{{ totalBalance() | number: '1.0-0' }}</span> <small>₪</small></span>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- דורש תשומת לב -->
+    <section class="panel attention">
+      <h3 class="panel-title"><mat-icon>notifications</mat-icon>דורש תשומת לב</h3>
+      <p class="panel-sub" *ngIf="!attention.length">הכל מסודר — אין חיובים בעייתיים, הסנכרון עדכני וכל ההוצאות משויכות.</p>
+      <a class="att" *ngFor="let a of attention" [routerLink]="a.link" [class]="'att tone-' + a.tone">
+        <mat-icon>{{ a.icon }}</mat-icon>
+        <span class="att-text">{{ a.text }}</span>
+        <span class="att-action">{{ a.action }}</span>
+      </a>
+    </section>
+
+    <!-- החודש -->
+    <section class="panel month">
+      <h3 class="panel-title"><mat-icon>receipt_long</mat-icon>החודש עד עכשיו</h3>
+      <p class="panel-sub">יום {{ month.daysElapsed }} מתוך {{ month.daysInMonth }} · בהשוואה לאותו זמן בחודש הקודם</p>
+      <div class="m-row">
+        <span class="m-label">נכנס</span>
+        <span class="m-value income"><span class="num">{{ month.totals.income | number: '1.0-0' }}</span></span>
+        <span class="m-delta" *ngIf="changePct(month.totals.income, month.previous.income) as p">{{ p > 0 ? '▲' : '▼' }} {{ p > 0 ? p : -p }}%</span>
+      </div>
+      <div class="m-row">
+        <span class="m-label">יצא</span>
+        <span class="m-value"><span class="num">{{ month.totals.expenses | number: '1.0-0' }}</span></span>
+        <span class="m-delta" [class.bad]="(changePct(month.totals.expenses, month.previous.expenses) ?? 0) > 10" *ngIf="changePct(month.totals.expenses, month.previous.expenses) as p">{{ p > 0 ? '▲' : '▼' }} {{ p > 0 ? p : -p }}%</span>
+      </div>
+      <div class="m-row m-net" [class.negative]="month.totals.net < 0">
+        <span class="m-label">{{ month.totals.net >= 0 ? 'נשאר' : 'חסר' }}</span>
+        <span class="m-value"><span class="num">{{ month.totals.net | number: '1.0-0' }}</span></span>
+      </div>
+      <p class="m-insight" *ngIf="month.insights[0] as i">{{ i.text }}</p>
+      <a class="ghost-btn" routerLink="/transactions">לאן הולך הכסף</a>
+    </section>
+
+    <!-- יורד בקרוב -->
+    <section class="panel upcoming">
+      <h3 class="panel-title"><mat-icon>event_upcoming</mat-icon>עד סוף החודש</h3>
+      <p class="panel-sub" *ngIf="upcomingDebits() > 0">יורד בסך הכל <span class="num">{{ upcomingDebits() | number: '1.0-0' }}</span> ₪ מהחשבונות</p>
+      <p class="panel-sub" *ngIf="!upcoming.length">אין חיובים צפויים עד סוף החודש</p>
+      <div class="up-row" *ngFor="let e of upcoming">
+        <span class="up-date">{{ e.date | date: 'dd/MM' }}</span>
+        <span class="up-label">
+          {{ e.label }}
+          <small>{{ e.accountName }}{{ e.estimated ? ' · משוער' : '' }}{{ e.late ? ' · באיחור' : '' }}</small>
+        </span>
+        <span class="up-amount num" [class.income]="e.amount > 0">{{ e.amount | number: '1.0-0' }}</span>
+      </div>
+    </section>
+
+    <!-- מעשרות -->
+    <section class="panel maaser" *ngIf="maaser">
+      <h3 class="panel-title"><mat-icon>volunteer_activism</mat-icon>מעשרות</h3>
+      <div class="ma-main">
+        <span class="ma-value num">{{ maaser.totals.balance | number: '1.0-0' }}</span>
+        <span class="ma-label">{{ maaser.totals.balance > 0 ? '₪ נשאר לתת' : '₪ נתת מעבר לחובה' }}</span>
+      </div>
+      <p class="panel-sub">
+        החודש: חובה <span class="num">{{ maaserThisMonth().due | number: '1.0-0' }}</span> ₪ · נתת <span class="num">{{ maaserThisMonth().paid | number: '1.0-0' }}</span> ₪
+      </p>
+      <a class="ghost-btn" routerLink="/maaser">לפירוט</a>
+    </section>
+  </div>
+</ng-container>

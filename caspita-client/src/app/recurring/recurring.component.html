@@ -1,0 +1,124 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>הוראות קבע</h1>
+    <p class="header-sub">מזוהות אוטומטית מהיסטוריית החשבון ומתעדכנות בכל סנכרון</p>
+  </div>
+  <div class="header-controls">
+    <button class="ghost-btn" (click)="detect()" [disabled]="detecting"><mat-icon>auto_fix_high</mat-icon>זהה מחדש</button>
+    <button class="add-btn" (click)="showAdd = !showAdd"><mat-icon>add</mat-icon>הוסף ידנית</button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-ring delay-1"></div>
+    <div class="spinner-ring delay-2"></div>
+  </div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading">
+  <div class="panel" *ngIf="showAdd">
+    <h3 class="panel-title"><mat-icon>add_circle</mat-icon>הוראת קבע חדשה</h3>
+    <p class="panel-sub">לחיוב/הכנסה שעוד לא מופיעים בהיסטוריה (למשל הוראת קבע שנפתחה החודש)</p>
+    <div class="inline-form">
+      <mat-form-field appearance="outline">
+        <mat-label>חשבון</mat-label>
+        <mat-select [(ngModel)]="draft.accountId">
+          <mat-option *ngFor="let a of bankAccounts" [value]="a.id">{{ a.displayName }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>שם (כפי שיופיע בבנק)</mat-label>
+        <input matInput [(ngModel)]="draft.displayName" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="narrow field-compact">
+        <mat-label>סוג</mat-label>
+        <mat-select [(ngModel)]="draft.direction">
+          <mat-option value="debit">חיוב</mat-option>
+          <mat-option value="credit">הכנסה</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="narrow field-compact">
+        <mat-label>יום בחודש</mat-label>
+        <input matInput type="number" min="1" max="31" [(ngModel)]="draft.dayOfMonth" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="narrow field-compact">
+        <mat-label>סכום ₪</mat-label>
+        <input matInput type="number" min="0" [(ngModel)]="draft.amount" />
+      </mat-form-field>
+      <button class="add-btn" (click)="addManual()"><mat-icon>check</mat-icon>שמור</button>
+    </div>
+  </div>
+
+  <div class="stats-row" *ngIf="itemsOf('active').length">
+    <div class="stat-card">
+      <span class="stat-label">חיובים קבועים בחודש</span>
+      <span class="stat-value expense">{{ monthlyTotal('debit') | number: '1.0-0' }} ₪</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-card">
+      <span class="stat-label">הכנסות קבועות בחודש</span>
+      <span class="stat-value income">{{ monthlyTotal('credit') | number: '1.0-0' }} ₪</span>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="items.length === 0">
+    <div class="empty-icon"><mat-icon>autorenew</mat-icon></div>
+    <p class="empty-title">לא זוהו הוראות קבע</p>
+    <p class="empty-sub">צריך לפחות 3 חודשי היסטוריה בחשבון הבנק — בצעו סנכרון</p>
+  </div>
+
+  <ng-container *ngFor="let section of sections">
+    <div class="panel" *ngIf="itemsOf(section.status).length">
+      <h3 class="panel-title">{{ section.title }} ({{ itemsOf(section.status).length }})</h3>
+      <p class="panel-sub">{{ section.sub }}</p>
+      <div class="table-scroll"><table class="data-table">
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th>חשבון</th>
+            <th>יום</th>
+            <th class="num">סכום</th>
+            <th>ירד לאחרונה</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of itemsOf(section.status)" [class.dim]="section.status !== 'active'">
+            <td>
+              {{ item.displayName }}
+              <span class="chip chip-info" *ngIf="item.source === 'manual'">ידני</span>
+              <span class="chip chip-muted" *ngIf="item.amountVaries && item.userAmount === null" matTooltip="הסכום משתנה בין החודשים — מוצג החציון של 3 החודשים האחרונים">משתנה</span>
+            </td>
+            <td class="muted">{{ item.accountName }}</td>
+            <td>{{ item.dayOfMonth }}</td>
+            <td class="num">
+              <ng-container *ngIf="editingId !== item.id">
+                <span class="amount" [class.expense]="item.direction === 'debit'" [class.income]="item.direction === 'credit'">
+                  {{ item.direction === 'debit' ? '-' : '+' }}{{ item.amount | number: '1.0-0' }}
+                </span>
+                <span class="muted" *ngIf="item.userAmount !== null"> (קבעתם ידנית)</span>
+              </ng-container>
+              <span class="amount-edit" *ngIf="editingId === item.id">
+                <input type="number" [(ngModel)]="editAmount" (keydown.enter)="saveAmount(item)" />
+                <button class="icon-btn" (click)="saveAmount(item)" matTooltip="שמור"><mat-icon>check</mat-icon></button>
+                <button class="icon-btn" *ngIf="item.userAmount !== null && item.source === 'auto'" (click)="saveAmount(item, true)" matTooltip="חזרה לסכום מההיסטוריה"><mat-icon>history</mat-icon></button>
+              </span>
+            </td>
+            <td class="muted">{{ item.lastSeenDate ? (item.lastSeenDate | date: 'dd/MM/yy') : '—' }}</td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" (click)="startEdit(item)" matTooltip="שינוי סכום"><mat-icon>edit</mat-icon></button>
+                <button class="icon-btn" *ngIf="item.status === 'active' && item.source === 'auto'" (click)="setStatus(item, 'ignored')" matTooltip="התעלם (לא לכלול בתחזית)"><mat-icon>visibility_off</mat-icon></button>
+                <button class="icon-btn" *ngIf="item.status !== 'active'" (click)="setStatus(item, 'active')" matTooltip="החזר לפעילות"><mat-icon>restore</mat-icon></button>
+                <button class="icon-btn danger" *ngIf="item.source === 'manual'" (click)="remove(item)" matTooltip="מחק"><mat-icon>delete_outline</mat-icon></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table></div>
+    </div>
+  </ng-container>
+</ng-container>
