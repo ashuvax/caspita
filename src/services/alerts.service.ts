@@ -32,7 +32,9 @@ const CHANGE_MIN = 2;
 const FRESH_DAYS = 45;
 
 function fmt(n: number): string {
-  return Math.abs(n).toLocaleString('he-IL', { minimumFractionDigits: Math.abs(n) < 100 ? 2 : 0, maximumFractionDigits: 2 });
+  const v = Math.abs(n);
+  const whole = Math.abs(v - Math.round(v)) < 0.005;
+  return v.toLocaleString('he-IL', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
 }
 
 function priceAlert(groupKey: string, name: string, prev: number, last: number, date: string, link: string, monthly: boolean): AlertDto {
