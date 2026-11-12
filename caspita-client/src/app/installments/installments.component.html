@@ -1,0 +1,87 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>תשלומים</h1>
+    <p class="header-sub">קניות בתשלומים בכרטיסי האשראי — כמה נשאר, ומתי זה נגמר</p>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading && result">
+  <div class="empty-state" *ngIf="!result.plans.length">
+    <div class="empty-icon"><mat-icon>view_week</mat-icon></div>
+    <p class="empty-title">אין קניות בתשלומים</p>
+    <p class="empty-sub">כשתהיה קנייה בתשלומים באחד הכרטיסים, היא תופיע כאן אוטומטית</p>
+  </div>
+
+  <section class="summary" *ngIf="active().length">
+    <div class="sum-main">
+      <span class="sum-label">נשאר לשלם</span>
+      <span class="sum-value"><span class="num">{{ result.totalRemaining | number: '1.0-0' }}</span> <small>₪</small></span>
+      <span class="sum-sub">ב-{{ active().length }} {{ active().length === 1 ? 'עסקה' : 'עסקאות' }}</span>
+    </div>
+    <div class="months" *ngIf="result.upcoming.length">
+      <span class="months-label">כבר תפוס בחודשים הבאים</span>
+      <div class="month-bars">
+        <div class="mb" *ngFor="let u of result.upcoming" [matTooltip]="(u.month | monthLabel) + ': ' + (u.amount | number: '1.0-0') + ' ₪'">
+          <span class="mb-bar"><span class="mb-fill" [style.height.%]="(u.amount / maxUpcoming()) * 100"></span></span>
+          <span class="mb-month">{{ (u.month | monthLabel).split(' ')[0].slice(0, 3) }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="active().length">
+    <h3 class="panel-title"><mat-icon>schedule</mat-icon>בתשלומים עכשיו</h3>
+    <div class="plan" *ngFor="let p of active()">
+      <div class="plan-main">
+        <div class="plan-info">
+          <span class="plan-name">{{ p.name }}</span>
+          <span class="plan-sub">
+            {{ p.accountName }} · {{ p.totalAmount | number: '1.0-0' }} ₪ ב-{{ p.totalPayments }} תשלומים · מסתיים ב{{ p.endMonth | monthLabel }}
+          </span>
+          <span class="chip chip-info plan-loan" *ngIf="p.loanName"><mat-icon>handshake</mat-icon>הלוואה: {{ p.loanName }} — לא נספר כהוצאה</span>
+        </div>
+        <div class="plan-amount">
+          <strong><span class="num">{{ p.perPayment | number: '1.0-2' }}</span> ₪</strong>
+          <span>בחודש</span>
+        </div>
+      </div>
+      <div class="plan-progress">
+        <span class="track"><span class="fill" [style.width.%]="progressPct(p)"></span></span>
+        <span class="progress-text">{{ p.paidPayments }} מתוך {{ p.totalPayments }} · נשאר {{ p.remainingAmount | number: '1.0-0' }} ₪</span>
+        <button class="ghost-btn small" *ngIf="!p.loanId" (click)="openLoanForm(p)">
+          <mat-icon>handshake</mat-icon>זו הלוואה
+        </button>
+      </div>
+
+      <div class="loan-form" *ngIf="loanFormKey === p.key">
+        <mat-button-toggle-group [(ngModel)]="loanDirection" hideSingleSelectionIndicator>
+          <mat-button-toggle value="given">שילמתי בשביל מישהו</mat-button-toggle>
+          <mat-button-toggle value="taken">הלוואה שלקחתי</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-form-field appearance="outline" class="field-compact grow">
+          <mat-label>{{ loanDirection === 'given' ? 'בשביל מי' : 'ממי (למשל: הלוואה ממקס)' }}</mat-label>
+          <input matInput [(ngModel)]="loanName" (keydown.enter)="saveLoan(p)" />
+        </mat-form-field>
+        <button class="add-btn" (click)="saveLoan(p)" [disabled]="!loanName.trim() || saving">שמירה</button>
+        <p class="form-hint">
+          {{ loanDirection === 'given'
+            ? 'כל התשלומים (גם העתידיים) יירשמו כהלוואה שנתת ולא ייספרו כהוצאה. את ההחזרים רושמים במסך "הלוואות שנתתי".'
+            : 'ההלוואה תופיע ב"הלוואות שלי". התשלומים החודשיים ממשיכים להיספר כהוצאה.' }}
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="done().length">
+    <h3 class="panel-title"><mat-icon>task_alt</mat-icon>הסתיימו לאחרונה</h3>
+    <div class="done-row" *ngFor="let p of done()">
+      <span class="plan-name">{{ p.name }}</span>
+      <span class="plan-sub">{{ p.totalPayments }} תשלומים · התפנו {{ p.perPayment | number: '1.0-0' }} ₪ בחודש</span>
+    </div>
+  </section>
+</ng-container>

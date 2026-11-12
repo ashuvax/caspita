@@ -16,6 +16,18 @@ const routes: Routes = [
     loadChildren: () => import('./dashboard/dashboard.module').then((m) => m.DashboardModule),
   },
   {
+    path: 'assistant',
+    loadChildren: () => import('./assistant/assistant.module').then((m) => m.AssistantModule),
+  },
+  {
+    path: 'installments',
+    loadChildren: () => import('./installments/installments.module').then((m) => m.InstallmentsModule),
+  },
+  {
+    path: 'funds',
+    loadChildren: () => import('./funds/funds.module').then((m) => m.FundsModule),
+  },
+  {
     path: 'investments',
     loadChildren: () => import('./investments/investments.module').then((m) => m.InvestmentsModule),
   },

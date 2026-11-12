@@ -1,6 +1,6 @@
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 370px;
   gap: 20px;
   align-items: start;
 
@@ -25,10 +25,30 @@
   border-bottom: 1px solid var(--line);
 
   .cat-icon { color: var(--pine); font-size: 20px; width: 20px; height: 20px; }
-  .cat-name { flex: 1; font-size: 14px; color: var(--ink-2); }
+  .cat-name { flex: 1; min-width: 0; font-size: 14px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .muted { color: var(--muted); font-size: 12px; min-width: 18px; text-align: center; }
-  .icon-btn { width: 30px; height: 30px; }
+  .icon-btn { width: 30px; height: 30px; flex-shrink: 0; }
   &.add-row { margin-bottom: 8px; }
 }
 
 .icon-select { width: 72px; }
+
+.budget-field {
+  input {
+    width: 72px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-num);
+    font-size: 14px;
+    text-align: center;
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button, &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    &::placeholder { color: var(--muted); font-family: var(--font-body); font-size: 13px; }
+    &:focus { outline: none; border-color: var(--pine); background: var(--surface); }
+  }
+  &.set input { border-color: var(--gold-soft); background: var(--gold-tint); }
+}

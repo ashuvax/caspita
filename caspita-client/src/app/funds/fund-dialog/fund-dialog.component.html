@@ -1,0 +1,71 @@
+<h2 mat-dialog-title>{{ editing ? 'עריכת קופה' : 'קופה חדשה' }}</h2>
+
+<mat-dialog-content class="fund-body">
+  <div class="presets" *ngIf="!editing">
+    <button class="preset" *ngFor="let p of presets" (click)="usePreset(p)" [class.active]="name === p.name">
+      <mat-icon>{{ p.icon }}</mat-icon>{{ p.name }}
+    </button>
+  </div>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>בשביל מה הקופה</mat-label>
+    <input matInput [(ngModel)]="name" cdkFocusInitial />
+  </mat-form-field>
+
+  <div class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>יעד ₪ (רשות)</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="targetAmount" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>מתי צריך את הכסף</mat-label>
+      <input matInput type="date" [(ngModel)]="targetDate" />
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>כמה להפריש כל חודש ₪</mat-label>
+    <input matInput type="number" min="0" [(ngModel)]="monthlyAmount" />
+    <mat-hint *ngIf="suggestedMonthly() as s">
+      כדי להגיע ליעד בזמן: {{ s | number: '1.0-0' }} ₪ בחודש ·
+      <a class="hint-link" (click)="applySuggestion()">להשתמש בזה</a>
+    </mat-hint>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>הוצאות מאיזו קטגוריה יורדות מהקופה</mat-label>
+    <mat-select [(ngModel)]="categoryId">
+      <mat-option [value]="null">— בלי (רק חיסכון) —</mat-option>
+      <mat-option *ngFor="let c of categories" [value]="c.id"><mat-icon class="opt-icon">{{ c.icon }}</mat-icon>{{ c.name }}</mat-option>
+    </mat-select>
+    <mat-hint>למשל: כל ההוצאות בקטגוריה "חגים" יורדות מקופת החגים</mat-hint>
+  </mat-form-field>
+
+  <button class="more-toggle" (click)="showMore = !showMore">
+    <mat-icon>{{ showMore ? 'expand_less' : 'expand_more' }}</mat-icon>עוד הגדרות
+  </button>
+
+  <ng-container *ngIf="showMore">
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>מאיזה חודש מפרישים</mat-label>
+        <input matInput type="month" [(ngModel)]="startMonth" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>כבר יש בקופה ₪</mat-label>
+        <input matInput type="number" [(ngModel)]="openingBalance" />
+      </mat-form-field>
+    </div>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>הערה</mat-label>
+      <input matInput [(ngModel)]="note" />
+    </mat-form-field>
+  </ng-container>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button class="danger-text" *ngIf="editing" (click)="remove()">מחיקה</button>
+  <span class="spacer"></span>
+  <button mat-button (click)="cancel()">ביטול</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="!valid() || saving">שמירה</button>
+</mat-dialog-actions>

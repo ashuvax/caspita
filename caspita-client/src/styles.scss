@@ -443,3 +443,47 @@ div.mat-mdc-select-panel {
 
 .inline-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
 }
+
+/* ── תפריט העדכונים (פעמון) ───────────────── */
+.alerts-menu.mat-mdc-menu-panel {
+  min-width: 320px;
+  max-width: 380px;
+  border-radius: var(--radius);
+
+  .alerts-head { padding: 10px 16px 6px; font-weight: 700; color: var(--ink); font-size: 15px; }
+  .alerts-empty { margin: 0; padding: 6px 16px 14px; color: var(--muted); font-size: 14px; }
+
+  .alert-item.mat-mdc-menu-item {
+    height: auto;
+    min-height: 56px;
+    padding: 8px 12px 8px 8px;
+    align-items: flex-start;
+
+    .mat-mdc-menu-item-text { display: flex; align-items: flex-start; gap: 10px; width: 100%; }
+  }
+
+  .alert-icon { margin: 2px 0 0 !important; color: var(--muted); }
+  .tone-good .alert-icon { color: var(--leaf); }
+  .tone-bad .alert-icon { color: var(--brick); }
+  .tone-info .alert-icon { color: var(--gold-dark); }
+
+  .alert-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: normal;
+    line-height: 1.35;
+    strong { font-size: 14px; color: var(--ink); font-weight: 600; }
+    span { font-size: 13px; color: var(--ink-2); }
+  }
+
+  .alert-close {
+    display: flex;
+    padding: 2px;
+    border-radius: 50%;
+    color: var(--muted);
+    mat-icon { margin: 0 !important; font-size: 17px; width: 17px; height: 17px; }
+    &:hover { background: var(--paper-2); color: var(--ink); }
+  }
+}

@@ -105,6 +105,55 @@
     </div>
   </div>
 
+  <!-- זיכוי ממס על תרומות -->
+  <div class="panel s46" *ngIf="s46">
+    <div class="s46-head">
+      <div>
+        <h3 class="panel-title"><mat-icon>receipt_long</mat-icon>החזר מס על תרומות (סעיף 46)</h3>
+        <p class="panel-sub">
+          על תרומה למוסד עם אישור סעיף 46 מקבלים בחזרה 35% מהסכום. סמנו את המוסדות שיש להם אישור —
+          רואים את זה בקבלה ("מוכר לעניין סעיף 46") או באתר
+          <a href="https://www.guidestar.org.il/" target="_blank" rel="noopener noreferrer">גיידסטאר</a>.
+        </p>
+      </div>
+      <mat-form-field appearance="outline" class="field-compact year-select">
+        <mat-select [(ngModel)]="s46Year" (ngModelChange)="loadS46()">
+          <mat-option *ngFor="let y of s46Years" [value]="y">{{ y }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="s46-total">
+      <div class="s46-stat">
+        <span class="label">תרומות למוסדות מוכרים</span>
+        <strong>{{ s46.eligibleTotal | number: '1.0-0' }} ₪</strong>
+      </div>
+      <div class="s46-stat main">
+        <span class="label">החזר מס צפוי</span>
+        <strong>{{ s46.expectedCredit | number: '1.0-0' }} ₪</strong>
+      </div>
+      <div class="s46-stat">
+        <span class="label">סה"כ תרומות {{ s46.year }}</span>
+        <strong>{{ s46.donationsTotal | number: '1.0-0' }} ₪</strong>
+      </div>
+    </div>
+
+    <div class="s46-list">
+      <label class="s46-row" *ngFor="let p of s46.payees">
+        <mat-slide-toggle [checked]="p.eligible" (change)="toggleS46(p, $event.checked)" [attr.aria-label]="'סעיף 46: ' + p.name"></mat-slide-toggle>
+        <span class="s46-name">{{ p.name }}</span>
+        <span class="muted">{{ p.count }} תרומות</span>
+        <span class="s46-amount">{{ p.total | number: '1.0-0' }} ₪</span>
+      </label>
+      <p class="panel-sub" *ngIf="!s46.payees.length">אין תרומות ב-{{ s46.year }}</p>
+    </div>
+
+    <p class="s46-howto" *ngIf="s46.eligibleTotal > 0">
+      איך מקבלים: שכירים — דרך טופס 135 (בקשה להחזר מס) באתר רשות המסים, עם הקבלות. רוב המוסדות מדווחים היום ישירות לרשות המסים,
+      אז הקבלות מופיעות באזור האישי. יש סכום מינימלי שנתי (כ-200 ₪) ותקרה של 30% מההכנסה החייבת.
+    </p>
+  </div>
+
   <div class="panel">
     <h3 class="panel-title"><mat-icon>tune</mat-icon>הגדרות חישוב</h3>
     <p class="panel-sub">כל עסקה אפשר לסמן ידנית ("נספר" / "לא נספר") בחלון העסקה בעמוד העסקאות</p>

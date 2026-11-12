@@ -6,7 +6,9 @@ import { TransactionRecord, transactionNewColumns } from './transaction.model';
 import { MaaserRule } from './maaser-rule.model';
 import { RecurringItem } from './recurring-item.model';
 import { Setting } from './setting.model';
-import { Category, MerchantCategory } from './category.model';
+import { Category, MerchantCategory, categoryNewColumns } from './category.model';
+import { TransactionSplit } from './split.model';
+import { Fund } from './fund.model';
 import { Loan, LoanPayment, loanNewColumns } from './loan.model';
 import { SavingsAccount, SavingsEntry } from './savings.model';
 import { Holding } from './holding.model';
@@ -22,6 +24,9 @@ export async function initDatabase(): Promise<void> {
   await RecurringItem.sync();
   await Setting.sync();
   await Category.sync();
+  await ensureColumns('categories', categoryNewColumns);
+  await TransactionSplit.sync();
+  await Fund.sync();
   await MerchantCategory.sync();
   await Loan.sync();
   await ensureColumns('loans', loanNewColumns);
@@ -33,4 +38,4 @@ export async function initDatabase(): Promise<void> {
   await sequelize.getQueryInterface().dropTable('transaction_cache');
 }
 
-export { BankConfig, Account, TransactionRecord, MaaserRule, RecurringItem, Setting, Category, MerchantCategory, Loan, LoanPayment, SavingsAccount, SavingsEntry, Holding };
+export { BankConfig, Account, TransactionRecord, MaaserRule, RecurringItem, Setting, Category, MerchantCategory, Loan, LoanPayment, SavingsAccount, SavingsEntry, Holding, TransactionSplit, Fund };

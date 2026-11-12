@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getSupportedCompanies, getAllBanks, createBank, updateBank, deleteBank } from '../controllers/banks.controller';
 import * as finance from '../controllers/finance.controller';
+import * as features from '../controllers/features.controller';
 
 export const router = Router();
 
@@ -15,6 +16,25 @@ router.put('/accounts/:id', finance.updateAccount);
 
 router.get('/transactions/grouped', finance.getGrouped);
 router.put('/transactions/:id/maaser', finance.setMaaserOverride);
+router.put('/transactions/:id/splits', features.setSplits);
+
+router.get('/installments', features.getInstallments);
+router.post('/installments/loan', features.markInstallmentLoan);
+
+router.get('/funds', features.getFunds);
+router.post('/funds', features.createFund);
+router.put('/funds/:id', features.updateFund);
+router.delete('/funds/:id', features.deleteFund);
+
+router.get('/alerts', features.getAlerts);
+router.post('/alerts/dismiss', features.dismissAlert);
+
+router.get('/tax/section46', features.getSection46);
+router.put('/tax/section46/payee', features.setSection46Payee);
+
+router.get('/assistant/dataset', features.getAssistantDataset);
+router.get('/assistant/engines', features.getAssistantEngines);
+router.post('/assistant/ask', features.askAssistant);
 router.post('/sync', finance.startSync);
 router.get('/sync/status', finance.getSyncStatus);
 

@@ -81,7 +81,7 @@
     <!-- ניהול קטגוריות -->
     <div class="panel categories-panel">
       <h3 class="panel-title"><mat-icon>category</mat-icon>רשימת הקטגוריות</h3>
-      <p class="panel-sub">הוספה, שינוי שם ואייקון, מחיקה</p>
+      <p class="panel-sub">הוספה, שינוי שם ואייקון, ותקציב חודשי (רשות) — בלי תקציב משווים לחודש רגיל</p>
 
       <div class="cat-row add-row">
         <mat-form-field appearance="outline" class="icon-select field-compact">
@@ -102,6 +102,9 @@
           <mat-icon class="cat-icon">{{ c.icon }}</mat-icon>
           <span class="cat-name">{{ c.name }}</span>
           <span class="muted">{{ c.merchantCount }}</span>
+          <label class="budget-field" [class.set]="c.monthlyBudget" matTooltip="תקציב חודשי ₪ — ריק = בלי תקציב">
+            <input type="number" min="0" inputmode="numeric" [value]="c.monthlyBudget ?? ''" placeholder="תקציב" (change)="setBudget(c, $event)" (keydown.enter)="blur($event)" [attr.aria-label]="'תקציב חודשי ל' + c.name" />
+          </label>
           <button class="icon-btn" (click)="startEdit(c)" matTooltip="עריכה"><mat-icon>edit</mat-icon></button>
           <button class="icon-btn danger" (click)="deleteCategory(c)" matTooltip="מחיקה"><mat-icon>delete_outline</mat-icon></button>
         </ng-container>

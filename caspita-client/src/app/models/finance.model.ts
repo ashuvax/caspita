@@ -127,6 +127,7 @@ export interface Category {
   name: string;
   icon: string;
   merchantCount: number;
+  monthlyBudget: number | null;
 }
 
 export interface MerchantSummary {

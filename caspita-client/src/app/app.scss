@@ -18,7 +18,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 26px 22px 26px;
+  padding: 22px 18px 18px 22px;
 
   .logo-mark {
     width: 34px;
@@ -45,10 +45,63 @@
 
 .sidebar-nav {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 0 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.nav-group-title {
+  padding: 4px 14px 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #86a597;
+}
+
+.bell-btn {
+  margin-inline-start: auto;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #9fbaab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  mat-icon { font-size: 21px; width: 21px; height: 21px; }
+  &:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+  &.has-alerts { color: var(--gold-soft); }
+
+  .bell-count {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: var(--gold-soft);
+    color: var(--pine-dark);
+    font-family: var(--font-num);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+  }
 }
 
 .nav-item {
@@ -157,6 +210,10 @@
     scrollbar-width: none;
     &::-webkit-scrollbar { display: none; }
   }
+
+  .nav-group { display: contents; }
+  .nav-group-title { display: none; }
+  .sidebar-logo .bell-btn { margin-inline-start: 8px; }
 
   .nav-item {
     flex-shrink: 0;

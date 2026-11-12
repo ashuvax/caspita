@@ -166,8 +166,14 @@ export async function createCategory(req: Request, res: Response): Promise<void>
 }
 
 export async function updateCategory(req: Request, res: Response): Promise<void> {
-  const { name, icon } = req.body as { name?: string; icon?: string };
-  if (!(await categoriesService.update(parseId(req.params.id), { name, icon }))) throw notFound('הקטגוריה לא נמצאה');
+  const { name, icon, monthlyBudget } = req.body as { name?: string; icon?: string; monthlyBudget?: number | null };
+  let budget: number | null | undefined;
+  if (monthlyBudget !== undefined) {
+    budget = monthlyBudget === null || (monthlyBudget as unknown) === '' ? null : Number(monthlyBudget);
+    if (budget !== null && (!Number.isFinite(budget) || budget < 0)) throw badRequest('תקציב לא תקין');
+    if (budget === 0) budget = null;
+  }
+  if (!(await categoriesService.update(parseId(req.params.id), { name, icon, monthlyBudget: budget }))) throw notFound('הקטגוריה לא נמצאה');
   res.json(await categoriesService.list());
 }
 

@@ -10,6 +10,7 @@ import { syncService } from './sync.service';
 import { categoriesService, merchantKey } from './categories.service';
 import { loansService } from './loans.service';
 import { savingsService } from './savings.service';
+import { TransactionSplit } from '../models/split.model';
 
 /** זיכוי שמזכיר הלוואה: הלוואה שלקחתי או החזר של הלוואה שנתתי. כסף שצריך להחזיר / שחזר — לא הכנסה */
 const LOAN_CREDIT = /הלוא|הלווא/;
@@ -24,7 +25,7 @@ async function getRangeTransactions(fromMonth: string, toMonth: string): Promise
 }
 
 async function loadTransactions(where: WhereOptions<TransactionRecord>): Promise<TransactionDto[]> {
-  const [txns, accounts, configs, ctx, catMap, loanLinks, savingsLinks] = await Promise.all([
+  const [txns, accounts, configs, ctx, catMap, loanLinks, savingsLinks, splitRows] = await Promise.all([
     TransactionRecord.findAll({ where, order: [['date', 'DESC']] }),
     Account.findAll(),
     BankConfig.findAll(),
@@ -32,7 +33,10 @@ async function loadTransactions(where: WhereOptions<TransactionRecord>): Promise
     categoriesService.merchantMap(),
     loansService.linkedMap(),
     savingsService.linkedMap(),
+    TransactionSplit.findAll(),
   ]);
+  const splitsByTxn = new Map<number, { categoryId: number; amount: number }[]>();
+  for (const s of splitRows) splitsByTxn.set(s.transactionId, [...(splitsByTxn.get(s.transactionId) ?? []), { categoryId: s.categoryId, amount: s.amount }]);
   const accountById = new Map(accounts.map((a) => [a.id, a]));
   const configById = new Map(configs.map((c) => [c.id, c]));
 
@@ -71,6 +75,7 @@ async function loadTransactions(where: WhereOptions<TransactionRecord>): Promise
         maaserNote: maaserService.reasonOf(t, ctx),
         categoryId: t.categoryOverrideId ?? catMap.get(merchantKey(t.description, t.memo)) ?? null,
         categoryOverridden: t.categoryOverrideId !== null,
+        splits: splitsByTxn.get(t.id) ?? [],
         sourceCategory: t.category,
       };
     });
@@ -109,16 +114,33 @@ function groupByMerchant(transactions: TransactionDto[]): GroupedMerchant[] {
     .sort((a, b) => Math.abs(b.totalAmount) - Math.abs(a.totalAmount));
 }
 
+/** חלוקת עסקה לקטגוריות: הפיצולים, והשארית בקטגוריה של העסקה. הסכומים בסימן של העסקה */
+function categoryPortions(t: Pick<TransactionDto, 'chargedAmount' | 'categoryId' | 'splits'>): { categoryId: number | null; amount: number }[] {
+  if (!t.splits.length) return [{ categoryId: t.categoryId, amount: t.chargedAmount }];
+  const sign = t.chargedAmount < 0 ? -1 : 1;
+  let rest = Math.abs(t.chargedAmount);
+  const out: { categoryId: number | null; amount: number }[] = [];
+  for (const s of t.splits) {
+    const part = Math.min(s.amount, rest);
+    rest -= part;
+    out.push({ categoryId: s.categoryId, amount: sign * part });
+  }
+  if (rest > 0.005) out.push({ categoryId: t.categoryId, amount: sign * rest });
+  return out;
+}
+
 /** הוצאות נטו לכל קטגוריה (זיכויים בכרטיס כמו החזרים מקטינים את ההוצאה) */
 function categoryMap(txns: TransactionDto[]): Map<number | null, { expenses: number; count: number }> {
   const map = new Map<number | null, { expenses: number; count: number }>();
   for (const t of txns) {
     // הכנסות לבנק לא נכנסות לפילוח ההוצאות
     if (t.chargedAmount > 0 && t.accountKind !== 'card') continue;
-    const e = map.get(t.categoryId) ?? { expenses: 0, count: 0 };
-    e.expenses -= t.chargedAmount;
-    e.count++;
-    map.set(t.categoryId, e);
+    for (const p of categoryPortions(t)) {
+      const e = map.get(p.categoryId) ?? { expenses: 0, count: 0 };
+      e.expenses -= p.amount;
+      e.count++;
+      map.set(p.categoryId, e);
+    }
   }
   return map;
 }
@@ -150,6 +172,7 @@ async function getGrouped(month: string): Promise<GroupedResult> {
   const [txns, ...prevTxns] = await Promise.all([getMonthTransactions(month), ...prevMonths.map((m) => getMonthTransactions(m))]);
   const [cats, olderKeys] = await Promise.all([categoriesService.list(), merchantKeysBefore(month, 6)]);
   const catName = new Map(cats.map((c) => [c.id, c.name]));
+  const catBudget = new Map(cats.map((c) => [c.id, c.monthlyBudget]));
 
   const counted = txns.filter(isCounted);
   const prevCounted = prevTxns.map((list) => list.filter(isCounted));
@@ -170,9 +193,10 @@ async function getGrouped(month: string): Promise<GroupedResult> {
         prevExpenses: round2(prevMaps[0]?.get(categoryId)?.expenses ?? 0),
         // חציון ולא ממוצע — חודש חריג אחד (פירעון הלוואה, קניה גדולה) לא מעוות את ההשוואה
         avgExpenses: prevs.length ? round2(median(prevs)) : 0,
+        budget: categoryId === null ? null : catBudget.get(categoryId) ?? null,
       };
     })
-    .filter((c) => c.expenses > 0 || c.avgExpenses > 0)
+    .filter((c) => c.expenses > 0 || c.avgExpenses > 0 || c.budget)
     .sort((a, b) => b.expenses - a.expenses || b.avgExpenses - a.avgExpenses);
 
   const expenses = sumExpenses(counted);
@@ -215,6 +239,19 @@ async function getGrouped(month: string): Promise<GroupedResult> {
       }
     }
   }
+  // תקציבים: חריגה, או קצב מהיר מדי בחודש הנוכחי
+  for (const c of byCategory) {
+    if (!c.budget || c.categoryId === null) continue;
+    const name = catName.get(c.categoryId) ?? '';
+    if (c.expenses > c.budget) {
+      insights.push({ kind: 'budget', categoryId: c.categoryId, amount: c.expenses - c.budget, text: `${name}: עברת את התקציב ב-${fmt(c.expenses - c.budget)} ₪ (${fmt(c.expenses)} מתוך ${fmt(c.budget)})` });
+    } else if (isCurrentMonth) {
+      const pace = (c.budget * daysElapsed) / dim;
+      if (c.expenses > pace * 1.15 && c.expenses > c.budget * 0.25) {
+        insights.push({ kind: 'budget', categoryId: c.categoryId, amount: c.expenses - pace, text: `${name}: הוצאת ${Math.round((c.expenses / c.budget) * 100)}% מהתקציב, ועברו רק ${Math.round((daysElapsed / dim) * 100)}% מהחודש` });
+      }
+    }
+  }
   const merchants = groupByMerchant(counted);
   for (const m of merchants) {
     if (m.totalAmount > -NEW_MERCHANT_MIN) continue;
@@ -231,7 +268,7 @@ async function getGrouped(month: string): Promise<GroupedResult> {
       text: `ההוצאה הגדולה ביותר: ${merchantName(largest.description, largest.memo)} — ${fmt(largest.chargedAmount)} ₪`,
     });
   }
-  const order: Record<Insight['kind'], number> = { deficit: 0, pace: 1, surplus: 2, category_up: 3, new_merchant: 4, largest: 5, category_down: 6 };
+  const order: Record<Insight['kind'], number> = { deficit: 0, budget: 1, pace: 2, surplus: 3, category_up: 4, new_merchant: 5, largest: 6, category_down: 7 };
   insights.sort((a, b) => order[a.kind] - order[b.kind] || Math.abs(b.amount) - Math.abs(a.amount));
 
   const hiddenTxns = txns.filter((t) => !isCounted(t));
@@ -278,4 +315,4 @@ async function merchantKeysBefore(month: string, months: number): Promise<Set<st
 }
 
 export const transactionsService = { getGrouped, getMonthTransactions, getRangeTransactions };
-export { isCounted, sumIncome, sumExpenses, categoryMap };
+export { isCounted, sumIncome, sumExpenses, categoryMap, categoryPortions };

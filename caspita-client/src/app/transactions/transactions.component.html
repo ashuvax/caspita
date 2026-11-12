@@ -89,7 +89,8 @@
   <div class="panel" *ngIf="visibleCategories().length">
     <h3 class="panel-title"><mat-icon>donut_small</mat-icon>הוצאות לפי קטגוריה</h3>
     <p class="panel-sub">
-      הפס הוא החודש, הקו הדק הוא חודש רגיל (חציון 3 החודשים הקודמים){{ result.isCurrentMonth ? ' — החודש עוד לא הסתיים' : '' }}. לחיצה על קטגוריה מסננת את הרשימה.
+      הפס הוא החודש, הקו הדק הוא חודש רגיל (חציון 3 החודשים הקודמים), והקו הזהב הוא התקציב{{ result.isCurrentMonth ? ' — החודש עוד לא הסתיים' : '' }}. לחיצה על קטגוריה מסננת את הרשימה.
+      <a routerLink="/categories" class="inline-link">הגדרת תקציב לקטגוריה</a>
     </p>
     <div class="cat-list">
       <button class="cat-row" *ngFor="let c of visibleCategories()" [class.active]="categoryFilter === c.categoryId" (click)="toggleCategoryFilter(c.categoryId)">
@@ -98,10 +99,14 @@
         <span class="cat-bar">
           <span class="cat-bar-fill" [class.over]="overAverage(c)" [style.width.%]="barPct(c)"></span>
           <span class="cat-bar-avg" *ngIf="c.avgExpenses > 0" [style.right.%]="avgPct(c)" [matTooltip]="'חודש רגיל: ' + (c.avgExpenses | number: '1.0-0') + ' ₪'"></span>
+          <span class="cat-bar-budget" *ngIf="c.budget" [style.right.%]="budgetPct(c)" [matTooltip]="'תקציב: ' + (c.budget | number: '1.0-0') + ' ₪'"></span>
         </span>
         <span class="cat-amount">{{ c.expenses | number: '1.0-0' }}</span>
-        <span class="cat-avg" [class.over]="overAverage(c)" *ngIf="c.avgExpenses > 0">רגיל {{ c.avgExpenses | number: '1.0-0' }}</span>
-        <span class="cat-avg" *ngIf="c.avgExpenses === 0">חדש</span>
+        <span class="cat-avg budget" [class.over]="c.expenses > c.budget" *ngIf="c.budget">
+          {{ c.expenses > c.budget ? 'חריגה ' + ((c.expenses - c.budget) | number: '1.0-0') : 'נשאר ' + ((c.budget - c.expenses) | number: '1.0-0') }}
+        </span>
+        <span class="cat-avg" [class.over]="overAverage(c)" *ngIf="!c.budget && c.avgExpenses > 0">רגיל {{ c.avgExpenses | number: '1.0-0' }}</span>
+        <span class="cat-avg" *ngIf="!c.budget && c.avgExpenses === 0">חדש</span>
       </button>
     </div>
     <button class="ghost-btn more-btn" *ngIf="hiddenCategoryCount() > 0 || showAllCategories" (click)="showAllCategories = !showAllCategories">

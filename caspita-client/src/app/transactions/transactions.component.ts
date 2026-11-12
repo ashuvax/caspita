@@ -6,12 +6,21 @@ import { takeUntil } from 'rxjs/operators';
 import { TransactionsService } from '../services/transactions.service';
 import { SyncService } from '../services/sync.service';
 import { FinanceService } from '../services/finance.service';
-import { GroupedMerchant, Insight, ScrapeError, TransactionsResult } from '../models/bank.model';
+import { GroupedMerchant, Insight, ScrapeError, Transaction, TransactionsResult } from '../models/bank.model';
 import { Category, monthLabel } from '../models/finance.model';
 import { TransactionDetailDialogComponent } from './transaction-detail-dialog/transaction-detail-dialog.component';
 import { CashDialogComponent } from './cash-dialog/cash-dialog.component';
 
 type Tab = 'expenses' | 'income';
+
+/** החלק של העסקה בקטגוריה (בסימן של העסקה): פיצולים, והשארית בקטגוריה של העסקה */
+function portionIn(t: Transaction, categoryId: number | null): number {
+  const sign = t.chargedAmount < 0 ? -1 : 1;
+  const splitTotal = t.splits.reduce((s, p) => s + p.amount, 0);
+  let part = t.categoryId === categoryId ? Math.max(0, Math.abs(t.chargedAmount) - splitTotal) : 0;
+  for (const s of t.splits) if (s.categoryId === categoryId) part += s.amount;
+  return sign * part;
+}
 type CategoryStat = TransactionsResult['byCategory'][number];
 
 const INSIGHT_ICONS: Record<Insight['kind'], string> = {
@@ -22,6 +31,7 @@ const INSIGHT_ICONS: Record<Insight['kind'], string> = {
   category_down: 'arrow_downward',
   new_merchant: 'fiber_new',
   largest: 'priority_high',
+  budget: 'speed',
 };
 
 @Component({
@@ -146,7 +156,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   insightTone(i: Insight): 'bad' | 'good' | 'neutral' {
-    if (i.kind === 'deficit' || i.kind === 'category_up') return 'bad';
+    if (i.kind === 'deficit' || i.kind === 'category_up' || i.kind === 'budget') return 'bad';
     if (i.kind === 'surplus' || i.kind === 'category_down') return 'good';
     return 'neutral';
   }
@@ -168,7 +178,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   private spentCategories(): CategoryStat[] {
-    return (this.result?.byCategory ?? []).filter((c) => c.expenses > 0);
+    return (this.result?.byCategory ?? []).filter((c) => c.expenses > 0 || c.budget);
   }
 
   visibleCategories(): CategoryStat[] {
@@ -182,7 +192,11 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   /** כל הפסים על אותו סולם — כך רואים גם את גודל הקטגוריה וגם את ההשוואה לחודש רגיל */
   private barScale(): number {
-    return Math.max(1, ...this.visibleCategories().map((c) => Math.max(c.expenses, c.avgExpenses)));
+    return Math.max(1, ...this.visibleCategories().map((c) => Math.max(c.expenses, c.avgExpenses, c.budget ?? 0)));
+  }
+
+  budgetPct(c: CategoryStat): number {
+    return ((c.budget ?? 0) / this.barScale()) * 100;
   }
 
   barPct(c: CategoryStat): number {
@@ -209,6 +223,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   overAverage(c: CategoryStat): boolean {
+    if (c.budget) return c.expenses > c.budget;
     return c.avgExpenses > 0 && c.expenses > c.avgExpenses * 1.1;
   }
 
@@ -242,12 +257,13 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       const filter = this.categoryFilter;
       list = list
         .map((m) => {
-          const transactions = m.transactions.filter((t) => t.categoryId === filter);
+          // עסקה מפוצלת מופיעה בכל קטגוריה שיש לה בה חלק, עם הסכום של החלק
+          const transactions = m.transactions.filter((t) => portionIn(t, filter) !== 0);
           return {
             ...m,
             transactions,
             transactionCount: transactions.length,
-            totalAmount: transactions.reduce((s, t) => s + t.chargedAmount, 0),
+            totalAmount: transactions.reduce((s, t) => s + portionIn(t, filter), 0),
           };
         })
         .filter((m) => m.transactions.length > 0);

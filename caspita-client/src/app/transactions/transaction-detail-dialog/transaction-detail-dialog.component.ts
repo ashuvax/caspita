@@ -3,6 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { GroupedMerchant, MaaserOverride, Transaction } from '../../models/bank.model';
 import { FinanceService } from '../../services/finance.service';
+import { FeaturesService } from '../../services/features.service';
 import { Category } from '../../models/finance.model';
 
 export interface TransactionDetailData {
@@ -21,12 +22,16 @@ type OverrideChoice = 'auto' | MaaserOverride;
 export class TransactionDetailDialogComponent {
   private changed = false;
   saving = new Set<number>();
+  /** העסקה שפתוח לה עורך הפיצול */
+  splitEditing: number | null = null;
+  draft: { categoryId: number | null; amount: number | null }[] = [];
   merchant: GroupedMerchant;
   categories: Category[];
 
   constructor(
     private dialogRef: MatDialogRef<TransactionDetailDialogComponent>,
     private finance: FinanceService,
+    private features: FeaturesService,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) data: TransactionDetailData
   ) {
@@ -124,6 +129,51 @@ export class TransactionDetailDialogComponent {
         this.changed = true;
       },
       error: () => this.snackBar.open('שגיאה בשמירת הקטגוריה', 'סגור', { duration: 4000 }),
+    });
+  }
+
+  // ---------- פיצול ----------
+
+  startSplit(txn: Transaction): void {
+    this.splitEditing = txn.id;
+    this.draft = txn.splits.length ? txn.splits.map((s) => ({ categoryId: s.categoryId, amount: s.amount })) : [{ categoryId: null, amount: null }];
+  }
+
+  addPart(): void {
+    this.draft = [...this.draft, { categoryId: null, amount: null }];
+  }
+
+  removePart(i: number): void {
+    this.draft = this.draft.filter((_, idx) => idx !== i);
+  }
+
+  splitRest(txn: Transaction): number {
+    return Math.abs(txn.chargedAmount) - txn.splits.reduce((s, p) => s + p.amount, 0);
+  }
+
+  draftRest(txn: Transaction): number {
+    return Math.round((Math.abs(txn.chargedAmount) - this.draft.reduce((s, p) => s + (p.amount ?? 0), 0)) * 100) / 100;
+  }
+
+  draftValid(txn: Transaction): boolean {
+    const filled = this.draft.filter((p) => p.amount);
+    return filled.length > 0 && filled.every((p) => p.categoryId !== null && (p.amount ?? 0) > 0) && this.draftRest(txn) >= 0;
+  }
+
+  saveSplit(txn: Transaction, clear = false): void {
+    const parts = clear
+      ? []
+      : this.draft.filter((p) => p.categoryId !== null && (p.amount ?? 0) > 0).map((p) => ({ categoryId: p.categoryId as number, amount: p.amount as number }));
+    this.features.setSplits(txn.id, parts).subscribe({
+      next: () => {
+        this.merchant = {
+          ...this.merchant,
+          transactions: this.merchant.transactions.map((t) => (t.id === txn.id ? { ...t, splits: parts } : t)),
+        };
+        this.splitEditing = null;
+        this.changed = true;
+      },
+      error: () => this.snackBar.open('שגיאה בשמירת הפיצול', 'סגור', { duration: 4000 }),
     });
   }
 

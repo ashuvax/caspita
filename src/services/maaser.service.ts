@@ -68,7 +68,7 @@ function findOffsetPairs(txns: TransactionRecord[], donationPatterns: string[], 
           !usedDebits.has(d.id) &&
           d.accountId === c.accountId &&
           d.date <= c.date &&
-          diffDays(d.date, c.date) <= OFFSET_WINDOW_DAYS &&
+          diffDays(c.date, d.date) <= OFFSET_WINDOW_DAYS &&
           Math.abs(d.chargedAmount + c.chargedAmount) < 0.005 &&
           normalizeText(merchantName(d.description, d.memo)) === name
       )

@@ -1,0 +1,78 @@
+.num { direction: ltr; unicode-bidi: isolate; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.summary {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  border-radius: var(--radius);
+  background: var(--pine);
+  color: #fff;
+
+  .sum-item { display: flex; flex-direction: column; gap: 2px; }
+  .sum-label { font-size: 14px; color: #b9cec3; font-weight: 600; }
+  .sum-value { font-family: var(--font-num); font-size: 34px; font-weight: 500;
+    &.small { font-size: 24px; }
+    small { font-size: 18px; color: #b9cec3; margin-inline-start: 4px; } }
+}
+
+.fund-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.fund {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  &:hover { border-color: var(--line-strong); }
+  &:focus-visible { outline: 2px solid var(--pine); outline-offset: 2px; }
+}
+
+.fund-head { display: flex; align-items: center; gap: 10px; }
+.fund-icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gold-tint); color: var(--gold-dark);
+  mat-icon { font-size: 19px; width: 19px; height: 19px; }
+}
+.fund-name { flex: 1; font-weight: 600; font-size: 16px; color: var(--ink); }
+
+.fund-balance {
+  font-size: 26px; font-weight: 500; color: var(--ink);
+  .num { font-size: 26px; }
+  .of { font-size: 14px; color: var(--muted); margin-inline-start: 6px; }
+  &.neg { color: var(--brick); }
+}
+
+.track { height: 8px; border-radius: 4px; background: var(--paper-2); overflow: hidden; }
+.fill { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+
+.fund-meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px; }
+.fund-warn { font-size: 13px; color: var(--brick-dark); font-weight: 600; }
+
+.fund-recent {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  .recent-title { font-size: 12px; color: var(--muted); }
+  .recent-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--ink-2); }
+}
+
+.footnote { margin: 14px 4px 0; font-size: 13px; color: var(--muted); max-width: 80ch; }
+
+.empty-state .add-btn { margin-top: 16px; }
+.empty-state .empty-sub { max-width: 56ch; margin-inline: auto; }
