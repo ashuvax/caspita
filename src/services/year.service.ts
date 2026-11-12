@@ -83,9 +83,17 @@ async function summary(year: number): Promise<YearSummary> {
     .filter((m) => m.amount > 0)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 10);
+  const seen = new Set<string>();
   const largest = counted
     .filter((t) => t.chargedAmount < 0 && !t.isCashWithdrawal)
     .sort((a, b) => a.chargedAmount - b.chargedAmount)
+    .filter((t) => {
+      // הוצאה גדולה אחת לכל ספק — אחרת חיוב קבוע (משכנתא) ממלא את כל הרשימה
+      const name = merchantName(t.description, t.memo);
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    })
     .slice(0, 5)
     .map((t) => ({ name: merchantName(t.description, t.memo), date: t.date, amount: round2(-t.chargedAmount) }));
 

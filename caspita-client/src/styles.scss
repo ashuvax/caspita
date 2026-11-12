@@ -180,6 +180,8 @@ h1, h2, h3, h4 { font-family: var(--font-num); }
   @include mat.form-field-density(-5);
   @include mat.select-density(-5);
   @include mat.select-overrides((trigger-text-size: 14px));
+  /* ברירת המחדל של Material היא 180px — שדה צר (סכום) נשבר בלי זה */
+  .mat-mdc-form-field-infix { width: auto; min-width: 0; }
 }
 
 /* חלונית האפשרויות */
@@ -515,3 +517,8 @@ div.mat-mdc-select-panel {
   body { background: #fff !important; }
   .panel { break-inside: avoid; box-shadow: none !important; }
 }
+
+/* שדות מספר בלי חיצי הגדלה/הקטנה */
+input[type='number'] { -moz-appearance: textfield; }
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

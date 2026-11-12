@@ -38,11 +38,16 @@
   .mo-label { font-size: 11.5px; color: var(--muted); }
 }
 
-.month-table { font-size: 13px; td.num, th.num { text-align: left; } }
+.month-table {
+  font-size: 13px;
+  th, td { padding-block: 7px; }
+  th:first-child, td:first-child { width: auto; }
+  th.num, td.num { width: 16%; text-align: left; }
+}
 
 .grid {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px;
-  @media (max-width: 900px) { grid-template-columns: 1fr; }
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr)); gap: 18px; margin-top: 18px;
+  align-items: start;
   .panel { margin: 0; }
 }
 

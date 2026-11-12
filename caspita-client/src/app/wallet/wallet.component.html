@@ -1,7 +1,7 @@
 <div class="page-header">
   <div class="header-title">
     <h1>ארנק מזומן</h1>
-    <p class="header-sub">משיכות מהכספומט וההוצאות במזומן. מה שלא פירטת נספר כהוצאה אחת בלי קטגוריה</p>
+    <p class="header-sub">משיכות מהכספומט ועל מה הלך הכסף</p>
   </div>
   <div class="header-controls">
     <button class="add-btn" (click)="addExpense()"><mat-icon>add</mat-icon>הוצאה במזומן</button>
@@ -81,7 +81,7 @@
               <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
             </mat-select>
           </mat-form-field>
-          <mat-form-field appearance="outline" class="field-compact amount">
+          <mat-form-field appearance="outline" class="field-compact f-amount">
             <input matInput type="number" min="0" [(ngModel)]="part.amount" placeholder="₪" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="field-compact note">

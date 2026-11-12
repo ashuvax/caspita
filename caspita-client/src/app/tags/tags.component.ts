@@ -160,7 +160,7 @@ export class TagsComponent implements OnInit, OnDestroy {
     return Math.max(1, ...(this.detail?.byCategory ?? []).map((c) => c.amount));
   }
 
-  sortedTransactions(): Transaction[] {
+  sortedTransactions(): TagDetail['transactions'] {
     return [...(this.detail?.transactions ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   }
 }

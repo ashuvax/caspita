@@ -75,7 +75,7 @@
       <h4>עסקאות</h4>
       <div class="txn" *ngFor="let t of sortedTransactions()">
         <span class="t-date num">{{ t.date | date: 'dd/MM/yy' }}</span>
-        <span class="t-name">{{ t.description }}<small>{{ categoryName(t.categoryId) }}</small></span>
+        <span class="t-name">{{ t.merchant }}<small>{{ categoryName(t.categoryId) }}</small></span>
         <span class="t-amount num" [class.income]="t.chargedAmount > 0">{{ -t.chargedAmount | number: '1.0-2' }} ₪</span>
         <button class="icon-btn" (click)="untag(t)" matTooltip="הסר מהתגית"><mat-icon>close</mat-icon></button>
       </div>

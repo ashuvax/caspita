@@ -9,3 +9,5 @@
 .full { width: 100%; }
 .row { display: flex; gap: 12px; > * { flex: 1; min-width: 0; } }
 .hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+.row { align-items: flex-start; }
+.hint.inline { margin: -6px 0 0; }
