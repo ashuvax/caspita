@@ -7,7 +7,8 @@ import { sequelize } from '../utils/db';
 import { encrypt } from '../utils/crypto';
 import { addDays, addMonths, currentMonth, dateInMonth, monthsBetween, today } from '../utils/dates';
 import { descriptionKey, round2 } from '../utils/text';
-import { BankConfig, Account, TransactionRecord, MaaserRule, Category, Loan, LoanPayment, SavingsAccount, SavingsEntry, Holding } from '../models';
+import { BankConfig, Account, TransactionRecord, MaaserRule, Category, Loan, LoanPayment, SavingsAccount, SavingsEntry, Holding, Fund } from '../models';
+import { taxService } from '../services/tax.service';
 import { settingsService } from '../services/settings.service';
 import { accountsService } from '../services/accounts.service';
 import { recurringService } from '../services/recurring.service';
@@ -191,11 +192,13 @@ export async function seedDemo(force: boolean): Promise<void> {
       }
     }
     // מנויים חודשיים
-    cardTxn(maxCard, maxCfg, 10, dateInMonth(m, 4), -99.9, 'פרטנר תקשורת', { category: 'שירותי תקשורת' });
+    // שינויי מחיר בחודש האחרון — מופיעים בהתראות (הוזלה והתייקרות)
+    const lastMonth = m === currentMonth();
+    cardTxn(maxCard, maxCfg, 10, dateInMonth(m, 4), lastMonth ? -79.9 : -99.9, 'פרטנר תקשורת', { category: 'שירותי תקשורת' });
     cardTxn(maxCard, maxCfg, 10, dateInMonth(m, 6), -189, 'הוט טלקום', { category: 'שירותי תקשורת' });
     cardTxn(israCard, israCfg, 2, dateInMonth(m, 9), -229, 'מכבי שירותי בריאות', { category: 'רפואה ובתי מרקחת' });
     cardTxn(israCard, israCfg, 2, dateInMonth(m, 11), -360, 'קופת העיר ירושלים', { category: 'שונות', memo: 'תרומה חודשית' });
-    cardTxn(maxCard, maxCfg, 10, dateInMonth(m, 14), -149, 'הולמס פלייס', { category: 'פנאי, בידור וספורט' });
+    cardTxn(maxCard, maxCfg, 10, dateInMonth(m, 3), lastMonth ? -169 : -149, 'הולמס פלייס', { category: 'פנאי, בידור וספורט' });
     cardTxn(maxCard, maxCfg, 10, dateInMonth(m, 17), -1890, 'ש.ל.מ ליסינג ציי רכב', { category: 'תחבורה ורכבים' });
   }
   // רכישה בתשלומים + רכישה בחו"ל
@@ -203,6 +206,11 @@ export async function seedDemo(force: boolean): Promise<void> {
   for (let n = 1; n <= 6; n++) {
     const d = dateInMonth(addMonths(ikea.slice(0, 7), n - 1), 6);
     cardTxn(maxCard, maxCfg, 10, d, -483.17, 'איקאה נתניה', { category: 'ריהוט ובית', installment: [n, 6] });
+  }
+  const laptop = dateInMonth(addMonths(currentMonth(), -4), 15);
+  for (let n = 1; n <= 12; n++) {
+    const d = dateInMonth(addMonths(laptop.slice(0, 7), n - 1), 15);
+    cardTxn(israCard, israCfg, 2, d, -358.25, 'KSP מחשבים', { category: 'מחשבים', installment: [n, 12], originalAmount: -4299 });
   }
   for (const days of [12, 55, 130, 240]) {
     const usd = between(25, 120);
@@ -288,6 +296,22 @@ export async function seedDemo(force: boolean): Promise<void> {
     const id = cats.get(cat);
     if (id) await categoriesService.setMerchant(merchant, id);
   }
+
+  // תקציבים לכמה קטגוריות
+  const budgets: [string, number][] = [['מזון וסופר', 3200], ['מסעדות ובתי קפה', 450], ['דלק', 650], ['פנאי ונופש', 400]];
+  for (const [name, budget] of budgets) {
+    const id = cats.get(name);
+    if (id) await Category.update({ monthlyBudget: budget }, { where: { id } });
+  }
+
+  // קופות ייעודיות
+  const year = Number(currentMonth().slice(0, 4));
+  await Fund.create({ name: 'פסח', icon: 'celebration', monthlyAmount: 600, targetAmount: 6000, targetDate: `${year + 1}-04-01`, startMonth: addMonths(currentMonth(), -3), categoryId: null, openingBalance: 1200 });
+  await Fund.create({ name: 'ביטוח רכב', icon: 'directions_car', monthlyAmount: 350, targetAmount: 4200, targetDate: `${year + 1}-02-15`, startMonth: addMonths(currentMonth(), -8), categoryId: null, openingBalance: 0 });
+  await Fund.create({ name: 'חופשה בקיץ', icon: 'beach_access', monthlyAmount: 400, targetAmount: null, targetDate: null, startMonth: addMonths(currentMonth(), -6), categoryId: cats.get('פנאי ונופש') ?? null, openingBalance: 0 });
+
+  // מוסד עם אישור סעיף 46
+  await taxService.setPayee('ועד הרבנים לישראל', true);
 
   console.log(`[DEMO] נוצרו ${all.length} עסקאות`);
 }
