@@ -9,6 +9,11 @@ import { addDays, addMonths, currentMonth, dateInMonth, monthsBetween, today } f
 import { descriptionKey, round2 } from '../utils/text';
 import { BankConfig, Account, TransactionRecord, MaaserRule, Category, Loan, LoanPayment, SavingsAccount, SavingsEntry, Holding, Fund } from '../models';
 import { taxService } from '../services/tax.service';
+import { cashService } from '../services/cash.service';
+import { splitsService } from '../services/splits.service';
+import { tagsService } from '../services/tags.service';
+import { rulesService } from '../services/rules.service';
+import { Op } from 'sequelize';
 import { settingsService } from '../services/settings.service';
 import { accountsService } from '../services/accounts.service';
 import { recurringService } from '../services/recurring.service';
@@ -111,6 +116,7 @@ export async function seedDemo(force: boolean): Promise<void> {
   const givenLoan = await Loan.create({
     direction: 'given', counterparty: 'יוסי לוי', amount: 6000, startDate: lentDate,
     dueDate: dateInMonth(addMonths(currentMonth(), 4), 1), note: 'עזרה לקניית רכב',
+    expectedMonthly: 1000, expectedDay: 10,
   });
   await Loan.create({
     direction: 'taken', counterparty: 'גמ"ח אור החסד', amount: 15000, startDate: dateInMonth(addMonths(currentMonth(), -8), 1),
@@ -313,5 +319,32 @@ export async function seedDemo(force: boolean): Promise<void> {
   // מוסד עם אישור סעיף 46
   await taxService.setPayee('ועד הרבנים לישראל', true);
 
+  // ארנק מזומן: הוצאות במזומן אחרי משיכה, ופירוט של משיכה אחרת
+  const atm = await TransactionRecord.findAll({ where: { description: 'משיכה מכספומט', date: { [Op.gte]: `${addMonths(currentMonth(), -3)}-01` } }, order: [['date', 'DESC']] });
+  if (atm[0]) {
+    await cashService.add({ date: addDaysTo(atm[0].date, 1), amount: -180, description: 'שוק — ירקות ופירות', categoryId: cats.get('מזון וסופר') ?? null, note: null });
+    await cashService.add({ date: addDaysTo(atm[0].date, 3), amount: -60, description: 'ספר', categoryId: null, note: 'חנות ספרים' });
+  }
+  if (atm[1]) {
+    const food = cats.get('מזון וסופר');
+    const gifts = cats.get('מתנות ושמחות');
+    if (food && gifts) await splitsService.set(atm[1].id, [{ categoryId: food, amount: 150, note: 'שוק' }, { categoryId: gifts, amount: 100, note: 'מתנה לבר מצווה' }]);
+  }
+
+  // תגית לאירוע
+  const wedding = await tagsService.create('חתונת אחיין', 'plum');
+  const weddingTxns = await TransactionRecord.findAll({ where: { [Op.or]: [{ description: { [Op.like]: '%אולמי הנסיכה%' } }, { memo: { [Op.like]: '%אולמי הנסיכה%' } }] } });
+  if (weddingTxns.length) await tagsService.addToTransactions(wedding.id, weddingTxns.map((t) => t.id));
+
+  // כלל סיווג: קנייה גדולה ב-AMAZON = מחשבים
+  const computers = cats.get('מחשבים') ?? cats.get('בית וריהוט');
+  if (computers) await rulesService.create({ categoryId: computers, text: 'AMAZON', minAmount: 300, maxAmount: null, direction: 'expense', accountId: null });
+
   console.log(`[DEMO] נוצרו ${all.length} עסקאות`);
+}
+
+function addDaysTo(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }

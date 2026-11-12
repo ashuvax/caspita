@@ -3,17 +3,22 @@ import { TransactionRecord } from '../models/transaction.model';
 import { Account } from '../models/account.model';
 import { Loan } from '../models/loan.model';
 import { Setting } from '../models/setting.model';
-import { addMonths, currentMonth, diffDays, monthOf, today } from '../utils/dates';
-import { descriptionKey, merchantName, round2 } from '../utils/text';
+import { BankConfig } from '../models/bank-config.model';
+import { addDays, addMonths, currentMonth, dateInMonth, diffDays, monthOf, monthsBetween, today } from '../utils/dates';
+import { descriptionKey, median, merchantName, round2 } from '../utils/text';
 import { transactionsService } from './transactions.service';
 import { installmentsService } from './installments.service';
+import { loansService } from './loans.service';
+import { merchantKey } from './categories.service';
+import { CASH_WITHDRAWAL } from './wallet.service';
+import { maaserService } from './maaser.service';
 
 export type AlertTone = 'good' | 'bad' | 'info';
 
 export interface AlertDto {
   /** מזהה יציב — לסגירה */
   key: string;
-  kind: 'price_up' | 'price_down' | 'budget' | 'installment_done' | 'installment_last';
+  kind: 'price_up' | 'price_down' | 'budget' | 'installment_done' | 'installment_last' | 'loan_late' | 'duplicate' | 'unusual' | 'new_merchant' | 'fee';
   tone: AlertTone;
   title: string;
   text: string;
@@ -158,14 +163,184 @@ async function installmentAlerts(): Promise<AlertDto[]> {
   return out;
 }
 
+/** כמה ימים אחרי היום בחודש ההחזר נחשב כמאחר */
+const LOAN_GRACE_DAYS = 7;
+
+/** הלוואות שנתתי עם החזר חודשי צפוי: עד היום היה אמור להגיע יותר ממה שנרשם */
+async function loanAlerts(): Promise<AlertDto[]> {
+  const loans = await loansService.list('given');
+  const now = today();
+  const out: AlertDto[] = [];
+  for (const l of loans) {
+    if (!l.expectedMonthly || l.closed || l.status === 'repaid') continue;
+    const day = l.expectedDay ?? 1;
+    const start = l.startDate ?? [...l.entries].sort((a, b) => a.date.localeCompare(b.date))[0]?.date ?? null;
+    if (!start) continue;
+    const dues = monthsBetween(monthOf(start), currentMonth())
+      .map((m) => dateInMonth(m, day))
+      .filter((d) => d > start && diffDays(now, d) >= LOAN_GRACE_DAYS);
+    if (!dues.length) continue;
+    const expected = Math.min(l.amount, dues.length * l.expectedMonthly);
+    const paid = l.paid;
+    const missing = round2(expected - paid);
+    if (missing < Math.min(l.expectedMonthly * 0.5, l.remaining) || missing < 1) continue;
+    const last = dues[dues.length - 1];
+    out.push({
+      key: `loan-late:${l.id}:${monthOf(last)}`,
+      kind: 'loan_late',
+      tone: 'bad',
+      title: `${l.counterparty} — לא נרשם החזר`,
+      text: paid > 0
+        ? `לפי ${fmt(l.expectedMonthly)} ₪ בחודש היו אמורים להגיע ${fmt(expected)} ₪, ונרשמו ${fmt(paid)} — חסרים ${fmt(missing)} ₪`
+        : `ההחזר של ${fmt(l.expectedMonthly)} ₪ היה אמור להגיע ב-${day} לחודש, ועוד לא נרשם`,
+      link: '/loans/given',
+      date: last,
+    });
+  }
+  return out;
+}
+
+/** עמלות בנק / כרטיס */
+export const FEE = /עמלה|עמלת|דמי ניהול|דמי כרטיס/;
+const DUP_DAYS = 30;
+const UNUSUAL_DAYS = 21;
+const NEW_MERCHANT_DAYS = 14;
+const NEW_MERCHANT_MIN = 400;
+
+/** חיובים שכדאי לבדוק: כפולים, גבוהים מהרגיל, ספק חדש בכרטיס, עמלה חדשה */
+async function anomalies(): Promise<AlertDto[]> {
+  const now = today();
+  const [txns, accounts, configs, ctx] = await Promise.all([
+    TransactionRecord.findAll({
+      where: {
+        date: { [Op.gte]: `${addMonths(currentMonth(), -12)}-01` },
+        chargedAmount: { [Op.lt]: 0 },
+        cardPaymentForAccountId: null,
+        internalTransfer: false,
+        loanId: null,
+        savingsId: null,
+      },
+      order: [['date', 'ASC']],
+    }),
+    Account.findAll(),
+    BankConfig.findAll(),
+    maaserService.loadContext(),
+  ]);
+  const accById = new Map(accounts.map((a) => [a.id, a]));
+  const bankName = new Map(configs.map((c) => [c.id, c.displayName]));
+  const list = txns.filter((t) => {
+    const a = accById.get(t.accountId);
+    return a && !a.isHidden && a.kind !== 'cash';
+  });
+  const oldest = list[0]?.date ?? now;
+  const out: AlertDto[] = [];
+
+  // חיוב כפול: אותו חשבון, אותו יום, אותו סכום, אותו תיאור
+  const dups = new Map<string, TransactionRecord[]>();
+  for (const t of list) {
+    // סכומים קטנים (נסיעה באוטובוס, קפה) חוזרים באותו יום באופן טבעי
+    if (diffDays(now, t.date) > DUP_DAYS || (t.installmentTotal ?? 0) > 1 || -t.chargedAmount < 100) continue;
+    const k = `${t.accountId}|${t.date}|${t.chargedAmount}|${descriptionKey(t.description)}`;
+    dups.set(k, [...(dups.get(k) ?? []), t]);
+  }
+  for (const group of dups.values()) {
+    if (group.length < 2) continue;
+    const t = group[0];
+    out.push({
+      key: `dup:${group.map((g) => g.id).sort((a, b) => a - b).join('-')}`,
+      kind: 'duplicate',
+      tone: 'bad',
+      title: `${merchantName(t.description, t.memo)} — חיוב כפול?`,
+      text: `${group.length} חיובים של ${fmt(t.chargedAmount)} ₪ באותו יום (${t.date.slice(8, 10)}/${t.date.slice(5, 7)})`,
+      link: '/transactions',
+      date: t.date,
+    });
+  }
+
+  const byMerchant = new Map<string, TransactionRecord[]>();
+  for (const t of list) {
+    // תרומות משתנות מטבען — לא חריגה
+    if ((t.installmentTotal ?? 0) > 1 || CASH_WITHDRAWAL.test(t.description) || maaserService.roleOf(t, ctx) === 'donation') continue;
+    const k = merchantKey(t.description, t.memo);
+    byMerchant.set(k, [...(byMerchant.get(k) ?? []), t]);
+  }
+  for (const group of byMerchant.values()) {
+    for (const [i, t] of group.entries()) {
+      const amount = -t.chargedAmount;
+      const prior = group.slice(0, i);
+      // חיוב גבוה בהרבה מהרגיל אצל אותו ספק
+      if (diffDays(now, t.date) <= UNUSUAL_DAYS && prior.length >= 4) {
+        const amounts = prior.map((p) => -p.chargedAmount);
+        const usual = median(amounts);
+        // גם מעל כל חיוב קודם — אחרת זה ספק שהסכומים אצלו משתנים ממילא (סופר, דלק)
+        if (amount >= usual * 2.5 && amount - usual >= 150 && amount >= Math.max(...amounts) * 1.3) {
+          out.push({
+            key: `unusual:${t.id}`,
+            kind: 'unusual',
+            tone: 'bad',
+            title: `${merchantName(t.description, t.memo)} — חיוב גבוה מהרגיל`,
+            text: `${fmt(amount)} ₪, בדרך כלל בסביבות ${fmt(usual)} ₪`,
+            link: '/transactions',
+            date: t.date,
+          });
+        }
+      }
+      // חיוב ראשון מספק לא מוכר בכרטיס אשראי (כשיש מספיק היסטוריה כדי לדעת)
+      if (
+        i === 0 &&
+        accById.get(t.accountId)?.kind === 'card' &&
+        diffDays(now, t.date) <= NEW_MERCHANT_DAYS &&
+        amount >= NEW_MERCHANT_MIN &&
+        diffDays(t.date, oldest) >= 90
+      ) {
+        out.push({
+          key: `new-merchant:${t.id}`,
+          kind: 'new_merchant',
+          tone: 'info',
+          title: `ספק חדש: ${merchantName(t.description, t.memo)}`,
+          text: `חיוב ראשון של ${fmt(amount)} ₪ ב${bankName.get(t.bankConfigId) ?? 'כרטיס'}. לא מכיר? כדאי לבדוק`,
+          link: '/transactions',
+          date: t.date,
+        });
+      }
+    }
+  }
+
+  // עמלה שלא הופיעה בחצי השנה שלפניה
+  for (const t of list) {
+    if (diffDays(now, t.date) > DUP_DAYS || !FEE.test(t.description)) continue;
+    const k = descriptionKey(t.description);
+    const from = addDays(t.date, -183);
+    const seen = list.some((p) => p.id !== t.id && p.date < t.date && p.date >= from && descriptionKey(p.description) === k);
+    if (seen || diffDays(t.date, oldest) < 90) continue;
+    out.push({
+      key: `fee:${t.id}`,
+      kind: 'fee',
+      tone: 'bad',
+      title: `עמלה חדשה: ${t.description}`,
+      text: `${fmt(t.chargedAmount)} ₪ ב${bankName.get(t.bankConfigId) ?? 'בנק'} — לא הופיעה בחצי השנה האחרונה`,
+      link: '/transactions',
+      date: t.date,
+    });
+  }
+  return out;
+}
+
 async function dismissed(): Promise<Set<string>> {
   const row = await Setting.findByPk(DISMISSED_KEY);
   return new Set(row ? (JSON.parse(row.value) as string[]) : []);
 }
 
 async function list(): Promise<AlertDto[]> {
-  const [prices, budgets, installments, hidden] = await Promise.all([priceChanges(), budgetAlerts(), installmentAlerts(), dismissed()]);
-  return [...budgets, ...prices, ...installments].filter((a) => !hidden.has(a.key)).sort((a, b) => b.date.localeCompare(a.date));
+  const [prices, budgets, installments, loans, odd, hidden] = await Promise.all([
+    priceChanges(),
+    budgetAlerts(),
+    installmentAlerts(),
+    loanAlerts(),
+    anomalies(),
+    dismissed(),
+  ]);
+  return [...odd, ...loans, ...budgets, ...prices, ...installments].filter((a) => !hidden.has(a.key)).sort((a, b) => b.date.localeCompare(a.date));
 }
 
 async function dismiss(key: string): Promise<void> {

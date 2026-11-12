@@ -6,10 +6,11 @@ import { MaterialModule } from './material.module';
 import { ListRowComponent } from './components/list-row/list-row.component';
 import { OtpDialogComponent } from './components/otp-dialog/otp-dialog.component';
 import { MonthLabelPipe } from './month-label.pipe';
+import { CashDialogComponent } from '../transactions/cash-dialog/cash-dialog.component';
 
 @NgModule({
-  declarations: [ListRowComponent, OtpDialogComponent, MonthLabelPipe],
+  declarations: [ListRowComponent, OtpDialogComponent, MonthLabelPipe, CashDialogComponent],
   imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, MaterialModule],
-  exports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, MaterialModule, ListRowComponent, OtpDialogComponent, MonthLabelPipe],
+  exports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, MaterialModule, ListRowComponent, OtpDialogComponent, MonthLabelPipe, CashDialogComponent],
 })
 export class SharedModule {}

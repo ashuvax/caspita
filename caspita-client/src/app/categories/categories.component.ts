@@ -1,12 +1,28 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Subject, forkJoin } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, forkJoin, of } from 'rxjs';
+import { debounceTime, switchMap, takeUntil } from 'rxjs/operators';
 import { FinanceService } from '../services/finance.service';
+import { FeaturesService } from '../services/features.service';
+import { Account } from '../models/bank.model';
+import { CategoryRule, CategoryRuleInput, RuleDirection, RulePreview } from '../models/features.model';
 import { SyncService } from '../services/sync.service';
 import { Category, CATEGORY_ICONS, MerchantSummary } from '../models/finance.model';
 
 type MerchantFilter = 'unassigned' | 'all' | number;
+
+interface RuleForm {
+  text: string;
+  minAmount: number | null;
+  maxAmount: number | null;
+  direction: RuleDirection | null;
+  accountId: number | null;
+  categoryId: number | null;
+}
+
+function emptyRule(): RuleForm {
+  return { text: '', minAmount: null, maxAmount: null, direction: 'expense', accountId: null, categoryId: null };
+}
 
 @Component({
   selector: 'app-categories',
@@ -29,9 +45,20 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   editIcon = 'label';
   readonly icons = CATEGORY_ICONS;
 
+  // כללי סיווג
+  rules: CategoryRule[] = [];
+  accounts: Account[] = [];
+  /** null = סגור, 0 = כלל חדש, אחרת עריכת כלל */
+  ruleEditing: number | null = null;
+  rule: RuleForm = emptyRule();
+  preview: RulePreview | null = null;
+  ruleSaving = false;
+  private preview$ = new Subject<void>();
+
   private destroy$ = new Subject<void>();
 
   constructor(
+    private features: FeaturesService,
     private finance: FinanceService,
     private sync: SyncService,
     private snackBar: MatSnackBar
@@ -39,6 +66,13 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.load();
+    this.preview$
+      .pipe(
+        debounceTime(350),
+        switchMap(() => (this.hasCondition() ? this.features.previewRule(this.ruleInputWithoutCategory()) : of(null))),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({ next: (p) => (this.preview = p), error: () => (this.preview = null) });
     this.sync.synced$.pipe(takeUntil(this.destroy$)).subscribe(() => this.load());
   }
 
@@ -48,12 +82,19 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   load(): void {
-    forkJoin({ categories: this.finance.getCategories(), merchants: this.finance.getCategoryMerchants() })
+    forkJoin({
+      categories: this.finance.getCategories(),
+      merchants: this.finance.getCategoryMerchants(),
+      rules: this.features.rules(),
+      accounts: this.finance.getAccounts(),
+    })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ categories, merchants }) => {
+        next: ({ categories, merchants, rules, accounts }) => {
           this.categories = categories;
           this.merchants = merchants;
+          this.rules = rules;
+          this.accounts = accounts.filter((a) => a.kind !== 'cash');
           this.loading = false;
         },
         error: () => {
@@ -162,5 +203,82 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   categoryName(id: number): string {
     return this.categories.find((c) => c.id === id)?.name ?? '';
+  }
+
+  // ---------- כללי סיווג ----------
+
+  accountName(id: number | null): string {
+    const a = this.accounts.find((x) => x.id === id);
+    return a ? `${a.bankName} ${a.label || a.accountNumber}` : '';
+  }
+
+  /** הכלל במשפט אחד: "תיאור מכיל ברייער · מעל 300 ₪ · הוצאה" */
+  describe(r: CategoryRule): string {
+    const parts: string[] = [];
+    if (r.text) parts.push(`התיאור מכיל "${r.text}"`);
+    if (r.minAmount !== null && r.maxAmount !== null) parts.push(`בין ${r.minAmount.toLocaleString('he-IL')} ל-${r.maxAmount.toLocaleString('he-IL')} ₪`);
+    else if (r.minAmount !== null) parts.push(`מ-${r.minAmount.toLocaleString('he-IL')} ₪ ומעלה`);
+    else if (r.maxAmount !== null) parts.push(`עד ${r.maxAmount.toLocaleString('he-IL')} ₪`);
+    if (r.direction) parts.push(r.direction === 'expense' ? 'הוצאה' : 'הכנסה');
+    if (r.accountId) parts.push(`ב${this.accountName(r.accountId)}`);
+    return parts.join(' · ');
+  }
+
+  newRule(): void {
+    this.ruleEditing = 0;
+    this.rule = emptyRule();
+    this.preview = null;
+  }
+
+  editRule(r: CategoryRule): void {
+    this.ruleEditing = r.id;
+    this.rule = { text: r.text ?? '', minAmount: r.minAmount, maxAmount: r.maxAmount, direction: r.direction, accountId: r.accountId, categoryId: r.categoryId };
+    this.ruleChanged();
+  }
+
+  ruleChanged(): void {
+    this.preview$.next();
+  }
+
+  hasCondition(): boolean {
+    const r = this.rule;
+    return !!r.text.trim() || r.minAmount !== null || r.maxAmount !== null || r.accountId !== null;
+  }
+
+  private ruleInputWithoutCategory(): Omit<CategoryRuleInput, 'categoryId'> {
+    const r = this.rule;
+    const num = (v: number | null) => (v === null || (v as unknown) === '' ? null : Number(v));
+    return { text: r.text.trim() || null, minAmount: num(r.minAmount), maxAmount: num(r.maxAmount), direction: r.direction, accountId: r.accountId };
+  }
+
+  ruleValid(): boolean {
+    return this.hasCondition() && this.rule.categoryId !== null;
+  }
+
+  saveRule(): void {
+    if (!this.ruleValid() || this.ruleEditing === null) return;
+    const input: CategoryRuleInput = { ...this.ruleInputWithoutCategory(), categoryId: this.rule.categoryId as number };
+    this.ruleSaving = true;
+    const req = this.ruleEditing ? this.features.updateRule(this.ruleEditing, input) : this.features.createRule(input);
+    req.subscribe({
+      next: () => {
+        this.ruleSaving = false;
+        this.ruleEditing = null;
+        this.features.rules().subscribe({ next: (r) => (this.rules = r), error: () => undefined });
+        this.snackBar.open('הכלל נשמר — חל גם על עסקאות קודמות', 'סגור', { duration: 3500 });
+      },
+      error: (err: { error?: { error?: string } }) => {
+        this.ruleSaving = false;
+        this.snackBar.open(err.error?.error ?? 'שגיאה בשמירת הכלל', 'סגור', { duration: 4000 });
+      },
+    });
+  }
+
+  deleteRule(r: CategoryRule): void {
+    if (!confirm('למחוק את הכלל?')) return;
+    this.features.deleteRule(r.id).subscribe({
+      next: () => (this.rules = this.rules.filter((x) => x.id !== r.id)),
+      error: () => this.snackBar.open('שגיאה במחיקה', 'סגור', { duration: 4000 }),
+    });
   }
 }

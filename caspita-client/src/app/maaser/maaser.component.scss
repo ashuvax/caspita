@@ -60,3 +60,24 @@
   .s46-amount { font-family: var(--font-num); min-width: 80px; text-align: left; color: var(--ink); }
 }
 .s46-howto { margin: 12px 0 0; font-size: 13px; color: var(--muted); max-width: 80ch; }
+
+.s46-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.num { direction: ltr; unicode-bidi: isolate; font-family: var(--font-num); }
+
+.import {
+  margin: 4px 0 16px; padding: 14px 16px; border-radius: var(--radius-sm); background: var(--paper); border: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 10px;
+  .import-title { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink);
+    mat-icon { color: var(--pine); font-size: 20px; width: 20px; height: 20px; } }
+  .import-groups { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
+  .ig { display: inline-flex; align-items: center; gap: 5px;
+    strong { font-family: var(--font-num); font-size: 16px; }
+    &.ok strong { color: var(--leaf-dark); } &.cash strong { color: var(--gold-dark); } &.bad strong { color: var(--brick); } }
+  .link-btn { all: unset; cursor: pointer; color: var(--pine); font-weight: 600; font-size: 13px; text-decoration: underline; }
+  .import-table { font-size: 13px; td.muted { color: var(--muted); } }
+  .import-note { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .import-actions { display: flex; gap: 8px; }
+  .spacer { flex: 1; }
+}
+
+.import .import-toggle { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }

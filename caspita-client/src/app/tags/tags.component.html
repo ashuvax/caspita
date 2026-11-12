@@ -1,0 +1,84 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>תגיות ואירועים</h1>
+    <p class="header-sub">כמה עלה אירוע או פרויקט — על פני כמה קטגוריות וחודשים. מתייגים עסקה בחלון שלה במסך "לאן הולך הכסף"</p>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<div class="layout" *ngIf="!loading">
+  <aside class="panel list-panel">
+    <div class="new-tag">
+      <mat-form-field appearance="outline" class="field-compact grow">
+        <mat-label>תגית חדשה</mat-label>
+        <input matInput [(ngModel)]="newName" (keydown.enter)="create()" placeholder="לדוגמה: חתונה של אחי" />
+      </mat-form-field>
+      <button class="icon-btn" (click)="create()" [disabled]="!newName.trim()" matTooltip="הוסף"><mat-icon>add</mat-icon></button>
+    </div>
+    <div class="colors" role="radiogroup" aria-label="צבע">
+      <button *ngFor="let c of colors" class="color" role="radio" [attr.aria-checked]="newColor === c" [class.on]="newColor === c" (click)="newColor = c">
+        <span class="tag-dot" [class]="'tag-dot tag-' + c"></span>
+      </button>
+    </div>
+
+    <p class="empty-note" *ngIf="!tags.length">עוד אין תגיות. צור אחת, ואז תייג עסקאות בחלון העסקה.</p>
+    <button class="tag-row" *ngFor="let t of tags" [class.active]="detail?.id === t.id" (click)="select(t.id)">
+      <span [class]="'tag-dot tag-' + t.color"></span>
+      <span class="tag-name">{{ t.name }}</span>
+      <span class="tag-total num">{{ t.total | number: '1.0-0' }} ₪</span>
+    </button>
+  </aside>
+
+  <section class="panel detail-panel" *ngIf="detail">
+    <div class="detail-head">
+      <ng-container *ngIf="!renaming">
+        <span [class]="'tag-chip tag-' + detail.color">{{ detail.name }}</span>
+        <button class="icon-btn" (click)="startRename()" matTooltip="שינוי שם"><mat-icon>edit</mat-icon></button>
+      </ng-container>
+      <ng-container *ngIf="renaming">
+        <mat-form-field appearance="outline" class="field-compact grow">
+          <input matInput [(ngModel)]="renameValue" (keydown.enter)="saveRename()" />
+        </mat-form-field>
+        <button class="icon-btn" (click)="saveRename()" matTooltip="שמור"><mat-icon>check</mat-icon></button>
+        <button class="icon-btn" (click)="renaming = false" matTooltip="ביטול"><mat-icon>close</mat-icon></button>
+      </ng-container>
+      <span class="spacer"></span>
+      <button *ngFor="let c of colors" class="color small" [class.on]="detail.color === c" (click)="setColor(c)" [attr.aria-label]="'צבע ' + c">
+        <span [class]="'tag-dot tag-' + c"></span>
+      </button>
+      <button class="icon-btn danger" (click)="remove()" matTooltip="מחיקת התגית"><mat-icon>delete_outline</mat-icon></button>
+    </div>
+
+    <div class="headline">
+      <span class="big num">{{ detail.total | number: '1.0-0' }} <small>₪</small></span>
+      <span class="sub" *ngIf="detail.count">
+        {{ detail.count === 1 ? 'עסקה אחת' : detail.count + ' עסקאות' }}
+        <ng-container *ngIf="detail.firstDate"> · {{ detail.firstDate | date: 'dd/MM/yy' }}<ng-container *ngIf="detail.lastDate !== detail.firstDate"> עד {{ detail.lastDate | date: 'dd/MM/yy' }}</ng-container></ng-container>
+      </span>
+      <span class="sub" *ngIf="!detail.count">עוד אין עסקאות בתגית. פתח עסקה במסך "לאן הולך הכסף" והוסף לה את התגית.</span>
+    </div>
+
+    <div class="cats" *ngIf="detail.byCategory.length > 1">
+      <h4>לפי קטגוריה</h4>
+      <div class="cat" *ngFor="let c of detail.byCategory">
+        <span class="cat-name">{{ categoryName(c.categoryId) }}</span>
+        <span class="cat-bar"><span class="cat-fill" [style.width.%]="(c.amount / maxCategory()) * 100"></span></span>
+        <span class="cat-amount num">{{ c.amount | number: '1.0-0' }} ₪</span>
+      </div>
+    </div>
+
+    <div class="txns" *ngIf="detail.count">
+      <h4>עסקאות</h4>
+      <div class="txn" *ngFor="let t of sortedTransactions()">
+        <span class="t-date num">{{ t.date | date: 'dd/MM/yy' }}</span>
+        <span class="t-name">{{ t.description }}<small>{{ categoryName(t.categoryId) }}</small></span>
+        <span class="t-amount num" [class.income]="t.chargedAmount > 0">{{ -t.chargedAmount | number: '1.0-2' }} ₪</span>
+        <button class="icon-btn" (click)="untag(t)" matTooltip="הסר מהתגית"><mat-icon>close</mat-icon></button>
+      </div>
+    </div>
+  </section>
+</div>

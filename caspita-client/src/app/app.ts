@@ -41,6 +41,7 @@ export class App implements OnInit, OnDestroy {
         { path: '/transactions', label: 'לאן הולך הכסף', icon: 'receipt_long' },
         { path: '/forecast', label: 'תחזית חיובים', icon: 'event_upcoming' },
         { path: '/installments', label: 'תשלומים', icon: 'view_week' },
+        { path: '/wallet', label: 'ארנק מזומן', icon: 'payments' },
         { path: '/recurring', label: 'הוראות קבע', icon: 'autorenew' },
       ],
     },
@@ -49,6 +50,8 @@ export class App implements OnInit, OnDestroy {
       items: [
         { path: '/funds', label: 'קופות', icon: 'savings' },
         { path: '/dashboard', label: 'לאורך זמן', icon: 'insights' },
+        { path: '/year', label: 'סיכום שנה', icon: 'event_note' },
+        { path: '/tags', label: 'תגיות ואירועים', icon: 'sell' },
         { path: '/maaser', label: 'מעשרות', icon: 'volunteer_activism' },
       ],
     },
@@ -101,6 +104,11 @@ export class App implements OnInit, OnDestroy {
     if (a.kind === 'price_up') return 'trending_up';
     if (a.kind === 'budget') return 'speed';
     if (a.kind === 'installment_done') return 'celebration';
+    if (a.kind === 'loan_late') return 'handshake';
+    if (a.kind === 'duplicate') return 'content_copy';
+    if (a.kind === 'unusual') return 'priority_high';
+    if (a.kind === 'new_merchant') return 'storefront';
+    if (a.kind === 'fee') return 'account_balance';
     return 'schedule';
   }
 

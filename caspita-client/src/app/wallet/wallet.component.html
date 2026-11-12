@@ -1,0 +1,124 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>ארנק מזומן</h1>
+    <p class="header-sub">משיכות מהכספומט וההוצאות במזומן. מה שלא פירטת נספר כהוצאה אחת בלי קטגוריה</p>
+  </div>
+  <div class="header-controls">
+    <button class="add-btn" (click)="addExpense()"><mat-icon>add</mat-icon>הוצאה במזומן</button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading && summary">
+  <div class="empty-state" *ngIf="!summary.withdrawals.length && !summary.expenses.length">
+    <div class="empty-icon"><mat-icon>payments</mat-icon></div>
+    <p class="empty-title">אין משיכות מזומן בחצי השנה האחרונה</p>
+    <p class="empty-sub">משיכה מכספומט תופיע כאן אוטומטית אחרי הסנכרון</p>
+  </div>
+
+  <section class="summary" *ngIf="summary.withdrawals.length">
+    <div class="sum-main">
+      <span class="sum-label">לא פורט</span>
+      <span class="sum-value"><span class="num">{{ summary.totals.unallocated | number: '1.0-0' }}</span> <small>₪</small></span>
+      <span class="sum-sub">מתוך {{ summary.totals.withdrawn | number: '1.0-0' }} ₪ שמשכת מאז {{ summary.fromMonth | monthLabel }}</span>
+    </div>
+    <div class="sum-side">
+      <div class="side-stat">
+        <span>פורט או נרשם</span>
+        <strong class="num">{{ summary.totals.detailed | number: '1.0-0' }} ₪</strong>
+      </div>
+      <div class="side-stat" *ngIf="summary.totals.received">
+        <span>התקבל במזומן</span>
+        <strong class="num">{{ summary.totals.received | number: '1.0-0' }} ₪</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="summary.withdrawals.length">
+    <h3 class="panel-title"><mat-icon>local_atm</mat-icon>משיכות</h3>
+    <div class="legend">
+      <span><i class="sw split"></i>פירטת לקטגוריות</span>
+      <span><i class="sw covered"></i>נרשם כהוצאה במזומן</span>
+      <span><i class="sw rest"></i>לא פורט</span>
+    </div>
+
+    <div class="wd" *ngFor="let w of summary.withdrawals">
+      <div class="wd-main">
+        <div class="wd-date">
+          <span class="d">{{ w.date | date: 'dd' }}</span>
+          <span class="m">{{ w.date | date: 'MMM' }}</span>
+        </div>
+        <div class="wd-info">
+          <span class="wd-amount"><span class="num">{{ w.amount | number: '1.0-2' }}</span> ₪</span>
+          <span class="wd-sub">{{ w.accountName }}</span>
+        </div>
+        <button class="ghost-btn small" *ngIf="editing !== w.id && w.categoryId === null" (click)="startEdit(w)">
+          <mat-icon>call_split</mat-icon>{{ w.splits.length ? 'עריכת פירוט' : 'פירוט' }}
+        </button>
+      </div>
+
+      <div class="bar" [attr.aria-label]="'פורט ' + w.splitTotal + ', נרשם ' + w.covered + ', לא פורט ' + w.remaining">
+        <span class="seg split" [style.width.%]="pct(w, w.splitTotal)"></span>
+        <span class="seg covered" [style.width.%]="pct(w, w.covered)"></span>
+      </div>
+      <div class="wd-parts">
+        <span *ngFor="let s of w.splits" class="part">{{ categoryName(s.categoryId) }} {{ s.amount | number: '1.0-2' }} ₪<ng-container *ngIf="s.note"> · {{ s.note }}</ng-container></span>
+        <span class="part covered-text" *ngIf="w.covered">נרשם במזומן {{ w.covered | number: '1.0-2' }} ₪</span>
+        <span class="part rest-text" *ngIf="w.categoryId !== null">כל המשיכה ב{{ categoryName(w.categoryId) }}</span>
+        <span class="part rest-text" *ngIf="w.categoryId === null && w.remaining > 0">לא פורט {{ w.remaining | number: '1.0-2' }} ₪</span>
+        <span class="part done-text" *ngIf="w.categoryId === null && w.remaining <= 0"><mat-icon>check</mat-icon>פורט במלואו</span>
+      </div>
+
+      <div class="editor" *ngIf="editing === w.id">
+        <p class="hint">על מה הלך הכסף? אפשר לפרט רק חלק — השאר יישאר הוצאה בלי קטגוריה.</p>
+        <div class="row" *ngFor="let part of draft; let i = index">
+          <mat-form-field appearance="outline" class="field-compact cat">
+            <mat-select [(ngModel)]="part.categoryId" placeholder="קטגוריה">
+              <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="field-compact amount">
+            <input matInput type="number" min="0" [(ngModel)]="part.amount" placeholder="₪" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="field-compact note">
+            <input matInput [(ngModel)]="part.note" placeholder="על מה (רשות)" />
+          </mat-form-field>
+          <button class="icon-btn" (click)="removePart(i)" matTooltip="הסר"><mat-icon>close</mat-icon></button>
+        </div>
+        <div class="actions">
+          <button class="ghost-btn small" (click)="addPart()"><mat-icon>add</mat-icon>עוד שורה</button>
+          <span class="rest" [class.bad]="draftRest(w) < 0">
+            {{ draftRest(w) < 0 ? 'יותר מסכום המשיכה' : 'יישאר בלי פירוט: ' + (draftRest(w) | number: '1.0-2') + ' ₪' }}
+          </span>
+          <span class="spacer"></span>
+          <button class="ghost-btn small" (click)="editing = null">ביטול</button>
+          <button class="add-btn" (click)="save(w)" [disabled]="!draftValid(w) || saving">שמירה</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="summary.expenses.length">
+    <h3 class="panel-title"><mat-icon>shopping_basket</mat-icon>הוצאות במזומן שרשמת</h3>
+    <div class="exp" *ngFor="let e of summary.expenses">
+      <span class="exp-date num">{{ e.date | date: 'dd/MM' }}</span>
+      <span class="exp-info">
+        <span class="exp-name">{{ e.description }}</span>
+        <span class="exp-note" *ngIf="e.note">{{ e.note }}</span>
+      </span>
+      <span class="chip" [class.chip-info]="e.covered" [class.chip-muted]="!e.covered">
+        {{ e.covered >= e.amount ? 'ירד מהמשיכה' : e.covered ? 'חלק ירד מהמשיכה' : 'מכסף שלא נמשך מהבנק' }}
+      </span>
+      <span class="exp-amount"><span class="num">{{ e.amount | number: '1.0-2' }}</span> ₪</span>
+    </div>
+  </section>
+
+  <p class="how">
+    <mat-icon>info</mat-icon>
+    הוצאה במזומן שרשמת יורדת מהמשיכה שלפניה (עד חודשיים), כדי שהכסף לא ייספר פעמיים. אם אין משיכה לפניה — כנראה שילמת מכסף שקיבלת, והיא נספרת כהוצאה רגילה.
+  </p>
+</ng-container>

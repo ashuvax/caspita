@@ -3,6 +3,7 @@ import { Category, MerchantCategory, DEFAULT_CATEGORIES } from '../models/catego
 import { TransactionRecord } from '../models/transaction.model';
 import { Account } from '../models/account.model';
 import { Setting } from '../models/setting.model';
+import { CategoryRule } from '../models/category-rule.model';
 import { addMonths, currentMonth } from '../utils/dates';
 import { merchantName, normalizeText, round2 } from '../utils/text';
 
@@ -51,6 +52,7 @@ async function update(id: number, data: { name?: string; icon?: string; monthlyB
 
 async function remove(id: number): Promise<boolean> {
   await MerchantCategory.destroy({ where: { categoryId: id } });
+  await CategoryRule.destroy({ where: { categoryId: id } });
   await TransactionRecord.update({ categoryOverrideId: null }, { where: { categoryOverrideId: id } });
   return (await Category.destroy({ where: { id } })) > 0;
 }

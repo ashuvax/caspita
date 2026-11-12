@@ -116,11 +116,69 @@
           <a href="https://www.guidestar.org.il/" target="_blank" rel="noopener noreferrer">גיידסטאר</a>.
         </p>
       </div>
-      <mat-form-field appearance="outline" class="field-compact year-select">
-        <mat-select [(ngModel)]="s46Year" (ngModelChange)="loadS46()">
-          <mat-option *ngFor="let y of s46Years" [value]="y">{{ y }}</mat-option>
-        </mat-select>
-      </mat-form-field>
+      <div class="s46-controls">
+        <input #reportInput type="file" accept="application/pdf,.pdf" hidden (change)="onReportFile($event)" />
+        <button class="ghost-btn" (click)="reportInput.click()" [disabled]="importing" matTooltip="ריכוז התרומות מהאזור האישי באתר רשות המסים">
+          <mat-icon>upload_file</mat-icon>{{ importing && !importPreview ? 'קורא...' : 'ייבוא דוח תרומות (PDF)' }}
+        </button>
+        <mat-form-field appearance="outline" class="field-compact year-select">
+          <mat-select [(ngModel)]="s46Year" (ngModelChange)="loadS46()">
+            <mat-option *ngFor="let y of s46Years" [value]="y">{{ y }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="import" *ngIf="importPreview as ip">
+      <p class="import-title">
+        <mat-icon>description</mat-icon>
+        דוח תרומות {{ ip.year }}: {{ ip.entries.length }} תרומות<ng-container *ngIf="ip.reportTotal !== null">, סה"כ {{ ip.reportTotal | number: '1.0-0' }} ₪</ng-container>
+      </p>
+      <div class="import-groups">
+        <div class="ig ok">
+          <strong>{{ ip.counts.matched }}</strong> נמצאה עסקה <span class="num">({{ ip.totals.matched | number: '1.0-0' }} ₪)</span>
+          <button class="link-btn" *ngIf="ip.counts.matched" (click)="showMatched = !showMatched">{{ showMatched ? 'הסתר' : 'הצג' }}</button>
+        </div>
+        <div class="ig cash" *ngIf="ip.counts.cash_new">
+          <strong>{{ ip.counts.cash_new }}</strong> תרומות במזומן — ייווצרו <span class="num">({{ ip.totals.cash_new | number: '1.0-0' }} ₪)</span>
+        </div>
+        <div class="ig bad" *ngIf="ip.counts.unmatched">
+          <strong>{{ ip.counts.unmatched }}</strong> לא נמצאה עסקה <span class="num">({{ ip.totals.unmatched | number: '1.0-0' }} ₪)</span>
+        </div>
+      </div>
+
+      <table class="data-table import-table" *ngIf="showMatched || ip.counts.cash_new || ip.counts.unmatched">
+        <tbody>
+          <ng-container *ngIf="showMatched">
+            <tr *ngFor="let e of importOf('matched')">
+              <td class="num">{{ e.date | date: 'dd/MM' }}</td>
+              <td>{{ e.org }}</td>
+              <td class="num">{{ e.amount | number: '1.0-2' }} ₪</td>
+              <td class="muted">{{ e.transaction?.name }} · {{ e.transaction?.date | date: 'dd/MM' }}</td>
+            </tr>
+          </ng-container>
+          <tr *ngFor="let e of importOf('cash_new')">
+            <td class="num">{{ e.date | date: 'dd/MM' }}</td>
+            <td>{{ e.org }}</td>
+            <td class="num">{{ e.amount | number: '1.0-2' }} ₪</td>
+            <td><span class="chip chip-warning">מזומן — תיווצר עסקה</span></td>
+          </tr>
+          <tr *ngFor="let e of importOf('unmatched')">
+            <td class="num">{{ e.date | date: 'dd/MM' }}</td>
+            <td>{{ e.org }}</td>
+            <td class="num">{{ e.amount | number: '1.0-2' }} ₪</td>
+            <td><span class="chip chip-danger">{{ e.cancelled ? 'ביטול תרומה' : 'לא נמצאה עסקה (' + e.methodLabel + ')' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="import-note" *ngIf="ip.counts.unmatched">תרומות בלי עסקה לא יסומנו. אם החיוב עוד לא סונכרן — סנכרן וייבא שוב, זה לא יוצר כפילויות.</p>
+
+      <label class="import-toggle"><mat-slide-toggle [(ngModel)]="importMarkPayees"></mat-slide-toggle><span>לסמן את העמותות האלה כמזכות גם בתרומות הבאות (גם לפני שהקבלה נקלטת)</span></label>
+      <div class="import-actions">
+        <span class="spacer"></span>
+        <button class="ghost-btn" (click)="importPreview = null">ביטול</button>
+        <button class="add-btn" (click)="applyImport()" [disabled]="!importCount() || importing">סמן {{ importCount() }} תרומות כמזכות</button>
+      </div>
     </div>
 
     <div class="s46-total">
@@ -142,6 +200,9 @@
       <label class="s46-row" *ngFor="let p of s46.payees">
         <mat-slide-toggle [checked]="p.eligible" (change)="toggleS46(p, $event.checked)" [attr.aria-label]="'סעיף 46: ' + p.name"></mat-slide-toggle>
         <span class="s46-name">{{ p.name }}</span>
+        <span class="chip chip-info" *ngIf="!p.eligible && p.eligibleCount" matTooltip="רק חלק מהתרומות לספק הזה מופיעות בדוח של רשות המסים">
+          חלקית: {{ p.eligibleAmount | number: '1.0-0' }} ₪ ב-{{ p.eligibleCount }} תרומות
+        </span>
         <span class="muted">{{ p.count }} תרומות</span>
         <span class="s46-amount">{{ p.total | number: '1.0-0' }} ₪</span>
       </label>

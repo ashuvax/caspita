@@ -11,6 +11,7 @@ import { recurringService } from './recurring.service';
 import { maaserService } from './maaser.service';
 import { installmentsService } from './installments.service';
 import { fundsService } from './funds.service';
+import { Tag } from '../models/tag.model';
 
 type Row = Record<string, string | number | null>;
 
@@ -35,6 +36,7 @@ async function build(): Promise<AssistantDataset> {
   const catName = new Map(cats.map((c) => [c.id, c.name]));
   const name = (id: number | null) => (id === null ? null : catName.get(id) ?? null);
 
+  const tagName = new Map((await Tag.findAll()).map((t) => [t.id, t.name]));
   const [given, taken, savings, investments, recurring, maaser, installments, funds] = await Promise.all([
     loansService.list('given'),
     loansService.list('taken'),
@@ -67,8 +69,11 @@ async function build(): Promise<AssistantDataset> {
         maaser_role: t.maaserRole,
         installment: t.installmentTotal ? `${t.installmentNumber}/${t.installmentTotal}` : null,
         status: t.status,
+        cash_withdrawal: t.isCashWithdrawal ? 1 : 0,
+        cash_recorded: t.cashCovered || null,
       })),
-      transaction_splits: txns.flatMap((t) => t.splits.map((s) => ({ transaction_id: t.id, category: name(s.categoryId), amount: s.amount }))),
+      transaction_tags: txns.flatMap((t) => t.tagIds.map((id) => ({ transaction_id: t.id, tag: tagName.get(id) ?? null }))),
+      transaction_splits: txns.flatMap((t) => t.splits.map((s) => ({ transaction_id: t.id, category: name(s.categoryId), amount: s.amount, note: s.note }))),
       categories: cats.map((c) => ({ name: c.name, monthly_budget: c.monthlyBudget })),
       loans: [...given, ...taken].map((l) => ({
         direction: l.direction === 'given' ? 'נתתי' : 'לקחתי',

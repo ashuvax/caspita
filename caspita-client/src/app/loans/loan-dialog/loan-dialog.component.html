@@ -29,6 +29,18 @@
     </mat-form-field>
   </div>
 
+  <div class="row" *ngIf="given">
+    <mat-form-field appearance="outline">
+      <mat-label>מחזיר כל חודש ₪ (רשות)</mat-label>
+      <input matInput type="number" min="0" [(ngModel)]="expectedMonthly" />
+      <mat-hint>אם לא נרשם החזר — תקפוץ תזכורת</mat-hint>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>בערך באיזה יום בחודש</mat-label>
+      <input matInput type="number" min="1" max="31" [(ngModel)]="expectedDay" [disabled]="!expectedMonthly" />
+    </mat-form-field>
+  </div>
+
   <mat-form-field appearance="outline" class="full">
     <mat-label>הערה (רשות)</mat-label>
     <input matInput [(ngModel)]="note" />

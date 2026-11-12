@@ -11,6 +11,9 @@ import { categoriesService, merchantKey } from './categories.service';
 import { loansService } from './loans.service';
 import { savingsService } from './savings.service';
 import { TransactionSplit } from '../models/split.model';
+import { TransactionTag } from '../models/tag.model';
+import { rulesService } from './rules.service';
+import { CASH_WITHDRAWAL, walletService } from './wallet.service';
 
 /** זיכוי שמזכיר הלוואה: הלוואה שלקחתי או החזר של הלוואה שנתתי. כסף שצריך להחזיר / שחזר — לא הכנסה */
 const LOAN_CREDIT = /הלוא|הלווא/;
@@ -24,8 +27,14 @@ async function getRangeTransactions(fromMonth: string, toMonth: string): Promise
   return loadTransactions({ date: { [Op.gte]: `${fromMonth}-01`, [Op.lt]: `${addMonths(toMonth, 1)}-01` } });
 }
 
+/** עסקאות לפי מזהים (תגית, חיפוש) */
+async function getByIds(ids: number[]): Promise<TransactionDto[]> {
+  if (!ids.length) return [];
+  return loadTransactions({ id: { [Op.in]: ids } });
+}
+
 async function loadTransactions(where: WhereOptions<TransactionRecord>): Promise<TransactionDto[]> {
-  const [txns, accounts, configs, ctx, catMap, loanLinks, savingsLinks, splitRows] = await Promise.all([
+  const [txns, accounts, configs, ctx, catMap, loanLinks, savingsLinks, splitRows, tagRows, matchRule, cashCover] = await Promise.all([
     TransactionRecord.findAll({ where, order: [['date', 'DESC']] }),
     Account.findAll(),
     BankConfig.findAll(),
@@ -34,9 +43,16 @@ async function loadTransactions(where: WhereOptions<TransactionRecord>): Promise
     loansService.linkedMap(),
     savingsService.linkedMap(),
     TransactionSplit.findAll(),
+    TransactionTag.findAll(),
+    rulesService.matcher(),
+    walletService.coverage(),
   ]);
-  const splitsByTxn = new Map<number, { categoryId: number; amount: number }[]>();
-  for (const s of splitRows) splitsByTxn.set(s.transactionId, [...(splitsByTxn.get(s.transactionId) ?? []), { categoryId: s.categoryId, amount: s.amount }]);
+  const splitsByTxn = new Map<number, TransactionDto['splits']>();
+  for (const s of splitRows) {
+    splitsByTxn.set(s.transactionId, [...(splitsByTxn.get(s.transactionId) ?? []), { categoryId: s.categoryId, amount: s.amount, note: s.note ?? null }]);
+  }
+  const tagsByTxn = new Map<number, number[]>();
+  for (const l of tagRows) tagsByTxn.set(l.transactionId, [...(tagsByTxn.get(l.transactionId) ?? []), l.tagId]);
   const accountById = new Map(accounts.map((a) => [a.id, a]));
   const configById = new Map(configs.map((c) => [c.id, c]));
 
@@ -47,6 +63,8 @@ async function loadTransactions(where: WhereOptions<TransactionRecord>): Promise
     })
     .map((t) => {
       const acc = accountById.get(t.accountId)!;
+      const isCashWithdrawal = acc.kind !== 'cash' && t.chargedAmount < 0 && CASH_WITHDRAWAL.test(t.description);
+      const rule = t.categoryOverrideId === null ? matchRule(t) : null;
       return {
         id: t.id,
         date: t.date,
@@ -73,9 +91,14 @@ async function loadTransactions(where: WhereOptions<TransactionRecord>): Promise
         maaserOverride: t.maaserOverride,
         maaserRole: maaserService.roleOf(t, ctx),
         maaserNote: maaserService.reasonOf(t, ctx),
-        categoryId: t.categoryOverrideId ?? catMap.get(merchantKey(t.description, t.memo)) ?? null,
+        // ידני לעסקה ← כלל ← הספק. משיכת מזומן בלי פירוט נשארת בלי קטגוריה
+        categoryId: t.categoryOverrideId ?? rule?.categoryId ?? (isCashWithdrawal ? null : catMap.get(merchantKey(t.description, t.memo)) ?? null),
         categoryOverridden: t.categoryOverrideId !== null,
+        ruleId: rule?.id ?? null,
         splits: splitsByTxn.get(t.id) ?? [],
+        tagIds: tagsByTxn.get(t.id) ?? [],
+        isCashWithdrawal,
+        cashCovered: cashCover.byWithdrawal.get(t.id) ?? 0,
         sourceCategory: t.category,
       };
     });
@@ -115,10 +138,11 @@ function groupByMerchant(transactions: TransactionDto[]): GroupedMerchant[] {
 }
 
 /** חלוקת עסקה לקטגוריות: הפיצולים, והשארית בקטגוריה של העסקה. הסכומים בסימן של העסקה */
-function categoryPortions(t: Pick<TransactionDto, 'chargedAmount' | 'categoryId' | 'splits'>): { categoryId: number | null; amount: number }[] {
-  if (!t.splits.length) return [{ categoryId: t.categoryId, amount: t.chargedAmount }];
+function categoryPortions(t: Pick<TransactionDto, 'chargedAmount' | 'categoryId' | 'splits' | 'cashCovered'>): { categoryId: number | null; amount: number }[] {
+  if (!t.splits.length && !t.cashCovered) return [{ categoryId: t.categoryId, amount: t.chargedAmount }];
   const sign = t.chargedAmount < 0 ? -1 : 1;
-  let rest = Math.abs(t.chargedAmount);
+  // החלק של משיכת מזומן שכבר נרשם כהוצאות מזומן — נספר שם, לא כאן
+  let rest = Math.max(0, Math.abs(t.chargedAmount) - t.cashCovered);
   const out: { categoryId: number | null; amount: number }[] = [];
   for (const s of t.splits) {
     const part = Math.min(s.amount, rest);
@@ -151,7 +175,7 @@ function isCounted(t: TransactionDto): boolean {
 }
 
 function sumExpenses(txns: TransactionDto[]): number {
-  return round2(txns.filter((t) => t.chargedAmount < 0).reduce((s, t) => s - t.chargedAmount, 0));
+  return round2(txns.filter((t) => t.chargedAmount < 0).reduce((s, t) => s - t.chargedAmount - t.cashCovered, 0));
 }
 
 function sumIncome(txns: TransactionDto[]): number {
@@ -314,5 +338,5 @@ async function merchantKeysBefore(month: string, months: number): Promise<Set<st
   return new Set(rows.map((r) => looseKey(merchantName(r.description, r.memo))));
 }
 
-export const transactionsService = { getGrouped, getMonthTransactions, getRangeTransactions };
+export const transactionsService = { getGrouped, getMonthTransactions, getRangeTransactions, getByIds };
 export { isCounted, sumIncome, sumExpenses, categoryMap, categoryPortions };

@@ -1,0 +1,149 @@
+<div class="page-header">
+  <div class="header-title">
+    <h1>סיכום שנה</h1>
+    <p class="header-sub">כל השנה בעמוד אחד — אפשר להדפיס או לשמור כ-PDF</p>
+  </div>
+  <div class="header-controls no-print">
+    <mat-form-field appearance="outline" class="field-compact year-select">
+      <mat-select [value]="year" (selectionChange)="setYear($event.value)" aria-label="שנה">
+        <mat-option *ngFor="let y of years" [value]="y">{{ y }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button class="ghost-btn" (click)="print()"><mat-icon>print</mat-icon>הדפסה / PDF</button>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"><div class="spinner-ring"></div></div>
+  <p class="loading-text">טוען...</p>
+</div>
+
+<ng-container *ngIf="!loading && summary as s">
+  <section class="hero">
+    <p class="hero-period">
+      {{ s.year }}<ng-container *ngIf="s.partial"> · עד {{ s.throughDate | date: 'd בMMMM' }}</ng-container>
+      <ng-container *ngIf="s.firstDate && s.firstDate > s.year + '-01-01'"> · הנתונים מתחילים ב-{{ s.firstDate | date: 'dd/MM/yy' }}</ng-container>
+    </p>
+    <div class="hero-row">
+      <div class="hero-stat">
+        <span class="label">נכנס</span>
+        <span class="value num">{{ s.totals.income | number: '1.0-0' }} <small>₪</small></span>
+        <span class="delta" *ngIf="s.previous && change(s.totals.income, s.previous.income) as d">{{ d > 0 ? '+' : '' }}{{ d }}% משנה שעברה</span>
+      </div>
+      <div class="hero-stat">
+        <span class="label">יצא</span>
+        <span class="value num">{{ s.totals.expenses | number: '1.0-0' }} <small>₪</small></span>
+        <span class="delta" *ngIf="s.previous && change(s.totals.expenses, s.previous.expenses) as d">{{ d > 0 ? '+' : '' }}{{ d }}% משנה שעברה</span>
+      </div>
+      <div class="hero-stat net" [class.neg]="s.totals.net < 0">
+        <span class="label">{{ s.totals.net >= 0 ? 'נשאר' : 'חסר' }}</span>
+        <span class="value num">{{ (s.totals.net < 0 ? -s.totals.net : s.totals.net) | number: '1.0-0' }} <small>₪</small></span>
+        <span class="delta" *ngIf="savingsRate() as r">{{ r }}% מההכנסות</span>
+      </div>
+    </div>
+    <p class="hero-foot">
+      ממוצע הוצאות בחודש: <strong class="num">{{ s.totals.avgMonthlyExpenses | number: '1.0-0' }} ₪</strong> ·
+      {{ s.totals.transactionCount | number }} עסקאות
+    </p>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title"><mat-icon>bar_chart</mat-icon>חודש אחרי חודש</h3>
+    <div class="legend">
+      <span><i class="sw inc"></i>נכנס</span>
+      <span><i class="sw exp"></i>יצא</span>
+    </div>
+    <div class="months" role="img" aria-label="הכנסות והוצאות לפי חודש">
+      <div class="mo" *ngFor="let m of s.months" [matTooltip]="(m.month | monthLabel) + ' — נכנס ' + (m.income | number: '1.0-0') + ' ₪, יצא ' + (m.expenses | number: '1.0-0') + ' ₪'">
+        <div class="bars">
+          <span class="b inc" [style.height.%]="(m.income / maxMonth()) * 100"></span>
+          <span class="b exp" [style.height.%]="(m.expenses / maxMonth()) * 100"></span>
+        </div>
+        <span class="mo-label">{{ (m.month | monthLabel).split(' ')[0].slice(0, 3) }}</span>
+      </div>
+    </div>
+    <table class="data-table month-table">
+      <thead><tr><th>חודש</th><th class="num">נכנס</th><th class="num">יצא</th><th class="num">נשאר</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let m of s.months">
+          <td>{{ m.month | monthLabel }}</td>
+          <td class="num">{{ m.income | number: '1.0-0' }}</td>
+          <td class="num">{{ m.expenses | number: '1.0-0' }}</td>
+          <td class="num"><span class="amount" [class.expense]="m.net < 0" [class.income]="m.net > 0">{{ m.net | number: '1.0-0' }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>category</mat-icon>על מה הלך הכסף</h3>
+      <div class="cat" *ngFor="let c of topCategories()">
+        <span class="cat-name">{{ categoryName(c.categoryId) }}</span>
+        <span class="cat-bar"><span class="cat-fill" [class.none]="c.categoryId === null" [style.width.%]="(c.amount / maxCategory()) * 100"></span></span>
+        <span class="cat-amount num">{{ c.amount | number: '1.0-0' }}</span>
+        <span class="cat-delta" *ngIf="change(c.amount, c.prevAmount) as d" [class.up]="d > 0">{{ d > 0 ? '+' : '' }}{{ d }}%</span>
+      </div>
+      <p class="note" *ngIf="!s.previous">השוואה לשנה שעברה תופיע כשיהיו נתונים מתחילת השנה הקודמת.</p>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title"><mat-icon>storefront</mat-icon>הספקים הגדולים</h3>
+      <div class="merchant" *ngFor="let m of s.topMerchants; let i = index">
+        <span class="rank num">{{ i + 1 }}</span>
+        <span class="m-name">{{ m.name }}<small>{{ m.count === 1 ? 'עסקה אחת' : m.count + ' עסקאות' }}</small></span>
+        <span class="m-amount num">{{ m.amount | number: '1.0-0' }} ₪</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="facts">
+    <div class="fact" *ngIf="s.totals.savings">
+      <mat-icon>savings</mat-icon>
+      <span class="f-label">הפקדת לחסכונות</span>
+      <span class="f-value num">{{ s.totals.savings | number: '1.0-0' }} ₪</span>
+    </div>
+    <div class="fact" *ngIf="s.maaser.due || s.maaser.paid">
+      <mat-icon>volunteer_activism</mat-icon>
+      <span class="f-label">מעשרות</span>
+      <span class="f-value num">{{ s.maaser.paid | number: '1.0-0' }} ₪</span>
+      <span class="f-sub">מתוך {{ s.maaser.due | number: '1.0-0' }} ₪ שהגיעו השנה</span>
+    </div>
+    <div class="fact" *ngIf="s.donations.credit">
+      <mat-icon>receipt</mat-icon>
+      <span class="f-label">החזר מס צפוי (סעיף 46)</span>
+      <span class="f-value num">{{ s.donations.credit | number: '1.0-0' }} ₪</span>
+      <span class="f-sub">על {{ s.donations.eligible | number: '1.0-0' }} ₪ תרומות מוכרות</span>
+    </div>
+    <div class="fact" *ngIf="s.fees.count">
+      <mat-icon>account_balance</mat-icon>
+      <span class="f-label">עמלות</span>
+      <span class="f-value num">{{ s.fees.total | number: '1.0-0' }} ₪</span>
+      <span class="f-sub">{{ s.fees.count }} חיובים</span>
+    </div>
+    <div class="fact" *ngIf="s.cashWithdrawn">
+      <mat-icon>local_atm</mat-icon>
+      <span class="f-label">משכת מזומן</span>
+      <span class="f-value num">{{ s.cashWithdrawn | number: '1.0-0' }} ₪</span>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="panel" *ngIf="s.largest.length">
+      <h3 class="panel-title"><mat-icon>north_east</mat-icon>ההוצאות הגדולות</h3>
+      <div class="merchant" *ngFor="let l of s.largest">
+        <span class="rank num">{{ l.date | date: 'dd/MM' }}</span>
+        <span class="m-name">{{ l.name }}</span>
+        <span class="m-amount num">{{ l.amount | number: '1.0-0' }} ₪</span>
+      </div>
+    </section>
+    <section class="panel" *ngIf="s.tags.length">
+      <h3 class="panel-title"><mat-icon>sell</mat-icon>אירועים</h3>
+      <a class="merchant tag-link" *ngFor="let t of s.tags" [routerLink]="['/tags']" [queryParams]="{ id: t.id }">
+        <span [class]="'tag-chip tag-' + t.color">{{ t.name }}</span>
+        <span class="m-name"></span>
+        <span class="m-amount num">{{ t.amount | number: '1.0-0' }} ₪</span>
+      </a>
+    </section>
+  </div>
+</ng-container>

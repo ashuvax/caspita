@@ -82,6 +82,7 @@
           <ng-container *ngIf="l.startDate"> · מ-{{ l.startDate | date: 'dd/MM/yy' }}</ng-container>
           <ng-container *ngIf="l.dueDate"> · {{ given ? 'להחזיר עד' : 'עד' }} {{ l.dueDate | date: 'dd/MM/yy' }}</ng-container>
           <ng-container *ngIf="l.monthlyPayment"> · {{ l.monthlyPayment | number: '1.0-0' }} ₪ בחודש</ng-container>
+          <ng-container *ngIf="l.expectedMonthly"> · מחזיר {{ l.expectedMonthly | number: '1.0-0' }} ₪ כל חודש<ng-container *ngIf="l.expectedDay"> (בסביבות ה-{{ l.expectedDay }})</ng-container></ng-container>
         </span>
       </div>
       <span class="lh-status">{{ statusText(l) }}</span>
