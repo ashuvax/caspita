@@ -23,6 +23,10 @@ export class Loan extends Model<InferAttributes<Loan>, InferCreationAttributes<L
   declare matchKey: CreationOptional<string | null>;
   /** ובסכום הזה (כשלאותו גוף יש כמה הלוואות עם אותו תיאור) */
   declare matchAmount: CreationOptional<number | null>;
+  /** הלוואה שנתתי: החזר חודשי צפוי (מזומן או העברה) — להתראה כשלא נרשם */
+  declare expectedMonthly: CreationOptional<number | null>;
+  /** באיזה יום בחודש ההחזר אמור להגיע */
+  declare expectedDay: CreationOptional<number | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -30,6 +34,8 @@ export class Loan extends Model<InferAttributes<Loan>, InferCreationAttributes<L
 export const loanNewColumns = {
   matchKey: { type: DataTypes.STRING, allowNull: true },
   matchAmount: { type: DataTypes.DOUBLE, allowNull: true },
+  expectedMonthly: { type: DataTypes.DOUBLE, allowNull: true },
+  expectedDay: { type: DataTypes.INTEGER, allowNull: true },
 };
 
 Loan.init(

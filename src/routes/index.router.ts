@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { getSupportedCompanies, getAllBanks, createBank, updateBank, deleteBank } from '../controllers/banks.controller';
 import * as finance from '../controllers/finance.controller';
 import * as features from '../controllers/features.controller';
@@ -31,6 +31,27 @@ router.post('/alerts/dismiss', features.dismissAlert);
 
 router.get('/tax/section46', features.getSection46);
 router.put('/tax/section46/payee', features.setSection46Payee);
+router.put('/tax/section46/transactions', features.setSection46Transactions);
+router.post('/tax/donations/preview', express.raw({ type: ['application/pdf', 'application/octet-stream'], limit: '15mb' }), features.previewDonationReport);
+router.post('/tax/donations/apply', features.applyDonationReport);
+
+router.get('/wallet', features.getWallet);
+
+router.get('/tags', features.getTags);
+router.post('/tags', features.createTag);
+router.get('/tags/:id', features.getTag);
+router.put('/tags/:id', features.updateTag);
+router.delete('/tags/:id', features.deleteTag);
+router.post('/tags/:id/transactions', features.addTagToTransactions);
+router.put('/transactions/:id/tags', features.setTransactionTags);
+
+router.get('/categories/rules', features.getRules);
+router.post('/categories/rules', features.createRule);
+router.post('/categories/rules/preview', features.previewRule);
+router.put('/categories/rules/:id', features.updateRule);
+router.delete('/categories/rules/:id', features.deleteRule);
+
+router.get('/year', features.getYearSummary);
 
 router.get('/assistant/dataset', features.getAssistantDataset);
 router.get('/assistant/engines', features.getAssistantEngines);

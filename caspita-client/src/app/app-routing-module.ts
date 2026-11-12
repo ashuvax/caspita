@@ -24,6 +24,18 @@ const routes: Routes = [
     loadChildren: () => import('./installments/installments.module').then((m) => m.InstallmentsModule),
   },
   {
+    path: 'wallet',
+    loadChildren: () => import('./wallet/wallet.module').then((m) => m.WalletModule),
+  },
+  {
+    path: 'tags',
+    loadChildren: () => import('./tags/tags.module').then((m) => m.TagsModule),
+  },
+  {
+    path: 'year',
+    loadChildren: () => import('./year/year.module').then((m) => m.YearModule),
+  },
+  {
     path: 'funds',
     loadChildren: () => import('./funds/funds.module').then((m) => m.FundsModule),
   },

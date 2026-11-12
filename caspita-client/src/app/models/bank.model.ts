@@ -73,7 +73,13 @@ export interface Transaction {
   maaserNote: string | null;
   categoryId: number | null;
   categoryOverridden: boolean;
-  splits: { categoryId: number; amount: number }[];
+  splits: { categoryId: number; amount: number; note?: string | null }[];
+  /** כלל הסיווג שקבע את הקטגוריה */
+  ruleId: number | null;
+  tagIds: number[];
+  isCashWithdrawal: boolean;
+  /** כמה מהמשיכה כבר נרשם כהוצאות מזומן */
+  cashCovered: number;
   sourceCategory: string | null;
 }
 

@@ -5,6 +5,7 @@ import { GroupedMerchant, MaaserOverride, Transaction } from '../../models/bank.
 import { FinanceService } from '../../services/finance.service';
 import { FeaturesService } from '../../services/features.service';
 import { Category } from '../../models/finance.model';
+import { TAG_COLORS, Tag } from '../../models/features.model';
 
 export interface TransactionDetailData {
   merchant: GroupedMerchant;
@@ -24,9 +25,11 @@ export class TransactionDetailDialogComponent {
   saving = new Set<number>();
   /** העסקה שפתוח לה עורך הפיצול */
   splitEditing: number | null = null;
-  draft: { categoryId: number | null; amount: number | null }[] = [];
+  draft: { categoryId: number | null; amount: number | null; note: string | null }[] = [];
   merchant: GroupedMerchant;
   categories: Category[];
+  tags: Tag[] = [];
+  newTagName = '';
 
   constructor(
     private dialogRef: MatDialogRef<TransactionDetailDialogComponent>,
@@ -37,6 +40,7 @@ export class TransactionDetailDialogComponent {
   ) {
     this.merchant = data.merchant;
     this.categories = data.categories;
+    this.features.tags().subscribe({ next: (t) => (this.tags = t), error: () => undefined });
     dialogRef.backdropClick().subscribe(() => this.close());
     dialogRef.keydownEvents().subscribe((e) => {
       if (e.key === 'Escape') this.close();
@@ -136,11 +140,13 @@ export class TransactionDetailDialogComponent {
 
   startSplit(txn: Transaction): void {
     this.splitEditing = txn.id;
-    this.draft = txn.splits.length ? txn.splits.map((s) => ({ categoryId: s.categoryId, amount: s.amount })) : [{ categoryId: null, amount: null }];
+    this.draft = txn.splits.length
+      ? txn.splits.map((s) => ({ categoryId: s.categoryId, amount: s.amount, note: s.note ?? null }))
+      : [{ categoryId: null, amount: null, note: null }];
   }
 
   addPart(): void {
-    this.draft = [...this.draft, { categoryId: null, amount: null }];
+    this.draft = [...this.draft, { categoryId: null, amount: null, note: null }];
   }
 
   removePart(i: number): void {
@@ -163,7 +169,9 @@ export class TransactionDetailDialogComponent {
   saveSplit(txn: Transaction, clear = false): void {
     const parts = clear
       ? []
-      : this.draft.filter((p) => p.categoryId !== null && (p.amount ?? 0) > 0).map((p) => ({ categoryId: p.categoryId as number, amount: p.amount as number }));
+      : this.draft
+          .filter((p) => p.categoryId !== null && (p.amount ?? 0) > 0)
+          .map((p) => ({ categoryId: p.categoryId as number, amount: p.amount as number, note: p.note }));
     this.features.setSplits(txn.id, parts).subscribe({
       next: () => {
         this.merchant = {
@@ -175,6 +183,70 @@ export class TransactionDetailDialogComponent {
       },
       error: () => this.snackBar.open('שגיאה בשמירת הפיצול', 'סגור', { duration: 4000 }),
     });
+  }
+
+  // ---------- תגיות ----------
+
+  tagOf(id: number): Tag | undefined {
+    return this.tags.find((t) => t.id === id);
+  }
+
+  availableTags(txn: Transaction): Tag[] {
+    return this.tags.filter((t) => !txn.tagIds.includes(t.id));
+  }
+
+  private saveTags(txn: Transaction, tagIds: number[]): void {
+    this.features.setTransactionTags(txn.id, tagIds).subscribe({
+      next: () => {
+        this.merchant = { ...this.merchant, transactions: this.merchant.transactions.map((t) => (t.id === txn.id ? { ...t, tagIds } : t)) };
+        this.changed = true;
+      },
+      error: () => this.snackBar.open('שגיאה בשמירת התגית', 'סגור', { duration: 4000 }),
+    });
+  }
+
+  addTag(txn: Transaction, tag: Tag): void {
+    this.saveTags(txn, [...txn.tagIds, tag.id]);
+  }
+
+  removeTag(txn: Transaction, tagId: number): void {
+    this.saveTags(txn, txn.tagIds.filter((id) => id !== tagId));
+  }
+
+  /** תגית חדשה — נוצרת ומתווספת לעסקה (או לכל העסקאות של הספק) */
+  createTag(txn: Transaction | null): void {
+    const name = this.newTagName.trim();
+    if (!name) return;
+    const color = TAG_COLORS[this.tags.length % TAG_COLORS.length];
+    this.features.createTag(name, color).subscribe({
+      next: (tag) => {
+        this.tags = [...this.tags, tag];
+        this.newTagName = '';
+        if (txn) this.addTag(txn, tag);
+        else this.tagAll(tag);
+      },
+      error: (err: { error?: { error?: string } }) => this.snackBar.open(err.error?.error ?? 'שגיאה ביצירת התגית', 'סגור', { duration: 4000 }),
+    });
+  }
+
+  /** כל העסקאות של הספק בחודש הזה */
+  tagAll(tag: Tag): void {
+    const ids = this.merchant.transactions.map((t) => t.id);
+    this.features.addTagToTransactions(tag.id, ids).subscribe({
+      next: () => {
+        this.merchant = {
+          ...this.merchant,
+          transactions: this.merchant.transactions.map((t) => (t.tagIds.includes(tag.id) ? t : { ...t, tagIds: [...t.tagIds, tag.id] })),
+        };
+        this.changed = true;
+        this.snackBar.open(`${ids.length} עסקאות תויגו "${tag.name}"`, 'סגור', { duration: 3000 });
+      },
+      error: () => this.snackBar.open('שגיאה בתיוג', 'סגור', { duration: 4000 }),
+    });
+  }
+
+  stop(event: Event): void {
+    event.stopPropagation();
   }
 
   categoryName(id: number | null): string {

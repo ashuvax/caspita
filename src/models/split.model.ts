@@ -8,9 +8,15 @@ export class TransactionSplit extends Model<InferAttributes<TransactionSplit>, I
   declare categoryId: number;
   /** סכום חיובי — החלק מתוך העסקה */
   declare amount: number;
+  /** על מה (למשל בפירוט משיכת מזומן: "ירקות בשוק") */
+  declare note: CreationOptional<string | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
+
+export const splitNewColumns = {
+  note: { type: DataTypes.TEXT, allowNull: true },
+};
 
 TransactionSplit.init(
   {
@@ -18,6 +24,7 @@ TransactionSplit.init(
     transactionId: { type: DataTypes.INTEGER, allowNull: false },
     categoryId: { type: DataTypes.INTEGER, allowNull: false },
     amount: { type: DataTypes.DOUBLE, allowNull: false },
+    ...splitNewColumns,
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },

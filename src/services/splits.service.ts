@@ -6,6 +6,7 @@ import { round2 } from '../utils/text';
 export interface SplitPart {
   categoryId: number;
   amount: number;
+  note?: string | null;
 }
 
 export class SplitError extends Error {}
@@ -17,7 +18,9 @@ export class SplitError extends Error {}
 async function set(transactionId: number, parts: SplitPart[]): Promise<boolean> {
   const txn = await TransactionRecord.findByPk(transactionId);
   if (!txn) return false;
-  const clean = parts.filter((p) => p.amount > 0).map((p) => ({ categoryId: p.categoryId, amount: round2(p.amount) }));
+  const clean = parts
+    .filter((p) => p.amount > 0)
+    .map((p) => ({ categoryId: p.categoryId, amount: round2(p.amount), note: p.note?.trim() || null }));
   const total = clean.reduce((s, p) => s + p.amount, 0);
   if (total > Math.abs(txn.chargedAmount) + 0.005) throw new SplitError('סכום החלקים גדול מסכום העסקה');
   const ids = [...new Set(clean.map((p) => p.categoryId))];

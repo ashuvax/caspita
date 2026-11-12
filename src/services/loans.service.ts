@@ -40,6 +40,9 @@ export interface LoanDto {
   monthlyPayment: number | null;
   /** תשלומים חדשים משויכים אוטומטית */
   autoMatch: boolean;
+  /** הלוואה שנתתי: החזר חודשי צפוי ויום בחודש — להתראה כשלא נרשם */
+  expectedMonthly: number | null;
+  expectedDay: number | null;
   entries: LoanEntry[];
 }
 
@@ -57,6 +60,8 @@ export interface LoanInput {
   /** תיאור התשלום הקבוע בבנק — תשלומים כאלה משויכים אוטומטית */
   matchDescription?: string | null;
   matchAmount?: number | null;
+  expectedMonthly?: number | null;
+  expectedDay?: number | null;
 }
 
 export interface LoanCandidate {
@@ -159,6 +164,8 @@ async function toDtos(loans: Loan[]): Promise<LoanDto[]> {
       daysFromDue: l.dueDate ? diffDays(now, l.dueDate) : null,
       monthlyPayment,
       autoMatch: !!l.matchKey,
+      expectedMonthly: l.expectedMonthly ?? null,
+      expectedDay: l.expectedDay ?? null,
       entries,
     };
   });
@@ -188,6 +195,8 @@ async function create(input: LoanInput): Promise<LoanDto> {
     closed: input.closed ?? false,
     matchKey: input.matchDescription ? descriptionKey(input.matchDescription) : null,
     matchAmount: input.matchAmount ?? null,
+    expectedMonthly: input.expectedMonthly ?? null,
+    expectedDay: input.expectedDay ?? null,
   });
   if (input.principalTransactionId) {
     await TransactionRecord.update({ loanId: loan.id }, { where: { id: input.principalTransactionId, loanId: null } });
@@ -206,6 +215,8 @@ async function update(id: number, input: Partial<LoanInput>): Promise<LoanDto | 
   if (input.note !== undefined) loan.note = input.note?.trim() || null;
   if (input.remainingOverride !== undefined) loan.remainingOverride = input.remainingOverride;
   if (input.closed !== undefined) loan.closed = input.closed;
+  if (input.expectedMonthly !== undefined) loan.expectedMonthly = input.expectedMonthly;
+  if (input.expectedDay !== undefined) loan.expectedDay = input.expectedDay;
   await loan.save();
   return get(id);
 }

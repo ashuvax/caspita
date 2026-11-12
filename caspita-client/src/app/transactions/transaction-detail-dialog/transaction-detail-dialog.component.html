@@ -32,6 +32,16 @@
     <mat-icon>money_off</mat-icon>
     הכנסה זו פטורה ממעשר
   </button>
+  <button class="ghost-btn" *ngIf="merchant.transactions.length > 1" [matMenuTriggerFor]="tagAllMenu">
+    <mat-icon>sell</mat-icon>
+    תיוג כל {{ merchant.transactions.length }} העסקאות
+  </button>
+  <mat-menu #tagAllMenu="matMenu">
+    <button mat-menu-item *ngFor="let t of tags" (click)="tagAll(t)"><span [class]="'tag-dot tag-' + t.color"></span>&nbsp; {{ t.name }}</button>
+    <div class="tag-new" (click)="stop($event)" (keydown)="stop($event)">
+      <input [(ngModel)]="newTagName" placeholder="תגית חדשה..." (keydown.enter)="createTag(null)" aria-label="תגית חדשה" />
+    </div>
+  </mat-menu>
 </div>
 
 <mat-dialog-content class="dialog-body">
@@ -75,13 +85,14 @@
             </mat-select>
           </mat-form-field>
           <span class="chip chip-info" *ngIf="txn.categoryOverridden">קטגוריה שונה לעסקה זו</span>
+          <a class="chip chip-muted rule-chip" *ngIf="txn.ruleId && !txn.categoryOverridden" routerLink="/categories" (click)="close()" matTooltip="הקטגוריה נקבעה לפי כלל — עריכה במסך הקטגוריות"><mat-icon>rule</mat-icon>לפי כלל</a>
           <button class="ghost-btn split-btn" *ngIf="isExpense(txn) && splitEditing !== txn.id" (click)="startSplit(txn)" matTooltip="חלק מהסכום שייך לקטגוריה אחרת">
             <mat-icon>call_split</mat-icon>{{ txn.splits.length ? 'עריכת פיצול' : 'פיצול' }}
           </button>
         </div>
         <div class="split-summary" *ngIf="txn.splits.length && splitEditing !== txn.id">
           <mat-icon>call_split</mat-icon>
-          <span *ngFor="let s of txn.splits">{{ categoryName(s.categoryId) }} {{ s.amount | number: '1.0-2' }} ₪ · </span>
+          <span *ngFor="let s of txn.splits">{{ categoryName(s.categoryId) }} {{ s.amount | number: '1.0-2' }} ₪<ng-container *ngIf="s.note"> ({{ s.note }})</ng-container> · </span>
           <span>השאר ({{ splitRest(txn) | number: '1.0-2' }} ₪) ב{{ categoryName(txn.categoryId) }}</span>
         </div>
         <div class="split-editor" *ngIf="splitEditing === txn.id">
@@ -107,6 +118,25 @@
             <button class="ghost-btn" (click)="splitEditing = null">סגור</button>
             <button class="add-btn" (click)="saveSplit(txn)" [disabled]="!draftValid(txn)">שמירה</button>
           </div>
+        </div>
+        <div class="maaser-line" *ngIf="txn.isCashWithdrawal">
+          <a class="chip chip-warning cash-link" routerLink="/wallet" (click)="close()">
+            <mat-icon>payments</mat-icon>
+            משיכת מזומן<ng-container *ngIf="txn.cashCovered"> · {{ txn.cashCovered | number: '1.0-0' }} ₪ כבר נרשמו במזומן</ng-container> — פירוט בארנק המזומן
+          </a>
+        </div>
+        <div class="tag-line" *ngIf="isCounted(txn)">
+          <span *ngFor="let id of txn.tagIds" [class]="'tag-chip tag-' + (tagOf(id)?.color ?? 'pine')">
+            {{ tagOf(id)?.name }}
+            <button (click)="removeTag(txn, id)" [attr.aria-label]="'הסר תגית ' + tagOf(id)?.name"><mat-icon>close</mat-icon></button>
+          </span>
+          <button class="tag-add" [matMenuTriggerFor]="tagMenu" aria-label="הוספת תגית"><mat-icon>sell</mat-icon>{{ txn.tagIds.length ? '' : 'תגית' }}</button>
+          <mat-menu #tagMenu="matMenu">
+            <button mat-menu-item *ngFor="let t of availableTags(txn)" (click)="addTag(txn, t)"><span [class]="'tag-dot tag-' + t.color"></span>&nbsp; {{ t.name }}</button>
+            <div class="tag-new" (click)="stop($event)" (keydown)="stop($event)">
+              <input [(ngModel)]="newTagName" placeholder="תגית חדשה..." (keydown.enter)="createTag(txn)" aria-label="תגית חדשה" />
+            </div>
+          </mat-menu>
         </div>
         <div class="maaser-line" *ngIf="txn.isCardPayment">
           <span class="chip chip-muted"><mat-icon>credit_card</mat-icon>תשלום כרטיס אשראי — לא נספר. כל הרכישות שבו מופיעות לפי ספק</span>

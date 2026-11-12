@@ -276,6 +276,16 @@ function parseLoanInput(body: Record<string, unknown>, partial: boolean): Partia
     out.remainingOverride = r;
   }
   if (body.closed !== undefined) out.closed = body.closed === true;
+  if (body.expectedMonthly !== undefined) {
+    const v = body.expectedMonthly === null || body.expectedMonthly === '' ? null : Number(body.expectedMonthly);
+    if (v !== null && (!Number.isFinite(v) || v <= 0)) throw badRequest('ההחזר החודשי לא תקין');
+    out.expectedMonthly = v;
+  }
+  if (body.expectedDay !== undefined) {
+    const d = body.expectedDay === null || body.expectedDay === '' ? null : Number(body.expectedDay);
+    if (d !== null && (!Number.isInteger(d) || d < 1 || d > 31)) throw badRequest('היום בחודש לא תקין');
+    out.expectedDay = d;
+  }
   if (body.principalTransactionId !== undefined && body.principalTransactionId !== null) out.principalTransactionId = parseId(body.principalTransactionId);
   if (typeof body.matchDescription === 'string' && body.matchDescription.trim()) out.matchDescription = body.matchDescription;
   if (body.matchAmount !== undefined && body.matchAmount !== null) {

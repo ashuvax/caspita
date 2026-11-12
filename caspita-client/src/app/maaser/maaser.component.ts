@@ -6,7 +6,7 @@ import { FinanceService } from '../services/finance.service';
 import { SyncService } from '../services/sync.service';
 import { MaaserRule, MaaserRuleKind, MaaserSettings, MaaserSummary } from '../models/finance.model';
 import { FeaturesService } from '../services/features.service';
-import { Section46Payee, Section46Summary } from '../models/features.model';
+import { DonationEntryStatus, DonationPreview, DonationPreviewEntry, Section46Payee, Section46Summary } from '../models/features.model';
 
 @Component({
   selector: 'app-maaser',
@@ -26,6 +26,11 @@ export class MaaserComponent implements OnInit, OnDestroy {
   s46: Section46Summary | null = null;
   s46Year = new Date().getFullYear();
   readonly s46Years = [0, 1, 2].map((i) => new Date().getFullYear() - i);
+  // ייבוא דוח תרומות
+  importing = false;
+  importPreview: DonationPreview | null = null;
+  importMarkPayees = false;
+  showMatched = false;
 
   private destroy$ = new Subject<void>();
 
@@ -72,9 +77,65 @@ export class MaaserComponent implements OnInit, OnDestroy {
   }
 
   toggleS46(p: Section46Payee, eligible: boolean): void {
-    this.features.setSection46Payee(p.name, eligible).subscribe({
+    this.features.setSection46Payee(p.name, eligible, this.s46Year).subscribe({
       next: () => this.loadS46(),
       error: () => this.snackBar.open('שגיאה בשמירה', 'סגור', { duration: 4000 }),
+    });
+  }
+
+  // ---------- ייבוא דוח תרומות ----------
+
+  onReportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.importing = true;
+    this.features.previewDonations(file).subscribe({
+      next: (p) => {
+        this.importing = false;
+        this.importPreview = p;
+        this.showMatched = false;
+        if (p.year && p.year !== this.s46Year && this.s46Years.includes(p.year)) {
+          this.s46Year = p.year;
+          this.loadS46();
+        }
+      },
+      error: (err: { error?: { error?: string } }) => {
+        this.importing = false;
+        this.snackBar.open(err.error?.error ?? 'שגיאה בקריאת הקובץ', 'סגור', { duration: 5000 });
+      },
+    });
+  }
+
+  importOf(status: DonationEntryStatus): DonationPreviewEntry[] {
+    return (this.importPreview?.entries ?? []).filter((e) => e.status === status);
+  }
+
+  importCount(): number {
+    const p = this.importPreview;
+    return p ? p.counts.matched + p.counts.cash_new : 0;
+  }
+
+  applyImport(): void {
+    const p = this.importPreview;
+    if (!p) return;
+    const entries = p.entries.filter((e) => e.status !== 'unmatched');
+    this.importing = true;
+    this.features.applyDonations(entries, this.importMarkPayees).subscribe({
+      next: (r) => {
+        this.importing = false;
+        this.importPreview = null;
+        const parts = [`${r.marked} תרומות סומנו כמזכות`];
+        if (r.created) parts.push(`נוספו ${r.created} תרומות במזומן`);
+        this.snackBar.open(parts.join(' · '), 'סגור', { duration: 5000 });
+        this.loadS46();
+        this.load();
+      },
+      error: () => {
+        this.importing = false;
+        this.snackBar.open('שגיאה בשמירה', 'סגור', { duration: 4000 });
+      },
     });
   }
 

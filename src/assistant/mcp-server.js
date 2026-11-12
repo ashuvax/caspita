@@ -13,10 +13,12 @@ const API = process.env.CASPITA_API || 'http://127.0.0.1:3000/api';
 const MAX_ROWS = 300;
 
 const SCHEMA = `טבלאות (SQLite):
-- transactions(id, date 'YYYY-MM-DD', month 'YYYY-MM', charge_date, merchant, description, memo, amount REAL — שלילי=יצא, חיובי=נכנס, original_amount, original_currency, account, account_kind 'bank'|'card'|'cash', category, counted 1/0, not_counted_reason, maaser_role 'income'|'donation'|NULL, installment 'n/N', status)
+- transactions(id, date 'YYYY-MM-DD', month 'YYYY-MM', charge_date, merchant, description, memo, amount REAL — שלילי=יצא, חיובי=נכנס, original_amount, original_currency, account, account_kind 'bank'|'card'|'cash', category, counted 1/0, not_counted_reason, maaser_role 'income'|'donation'|NULL, installment 'n/N', status, cash_withdrawal 1/0, cash_recorded)
   * לסיכומי הכנסות/הוצאות השתמש רק ב-counted=1. הכנסה = amount>0 AND account_kind<>'card'. זיכוי בכרטיס הוא החזר שמקטין הוצאה.
   * counted=0: תשלומי כרטיס, העברות בין החשבונות שלי, הלוואות, חסכונות — לא הוצאה ולא הכנסה (not_counted_reason מסביר).
-- transaction_splits(transaction_id, category, amount) — חלק מעסקה ששייך לקטגוריה אחרת (השארית בקטגוריה של העסקה)
+  * משיכת מזומן (cash_withdrawal=1): cash_recorded = כמה ממנה כבר נרשם כהוצאות מזומן (account_kind='cash') — לסכום הוצאות חסר את cash_recorded מהמשיכה כדי לא לספור פעמיים.
+- transaction_splits(transaction_id, category, amount, note) — חלק מעסקה ששייך לקטגוריה אחרת (השארית בקטגוריה של העסקה)
+- transaction_tags(transaction_id, tag) — תגיות לאירועים ("חתונה", "פסח")
 - categories(name, monthly_budget)
 - loans(direction 'נתתי'|'לקחתי', counterparty, amount, paid, remaining, monthly_payment, start_date, due_date, status, note)
 - savings(name, kind, value, withdrawable, monthly_deposit, note)

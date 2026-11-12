@@ -1,0 +1,99 @@
+.num { direction: ltr; unicode-bidi: isolate; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.summary {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  border-radius: var(--radius);
+  background: var(--pine);
+  color: #fff;
+
+  .sum-main { display: flex; flex-direction: column; gap: 2px; }
+  .sum-label { font-size: 14px; color: #b9cec3; font-weight: 600; }
+  .sum-value { font-family: var(--font-num); font-size: 34px; font-weight: 500; small { font-size: 18px; color: #b9cec3; } }
+  .sum-sub { font-size: 13px; color: #9fbaab; }
+  .sum-side { display: flex; gap: 28px; }
+  .side-stat {
+    display: flex; flex-direction: column; gap: 2px;
+    span { font-size: 13px; color: #9fbaab; }
+    strong { font-size: 19px; font-weight: 500; }
+  }
+}
+
+.legend {
+  display: flex; gap: 16px; flex-wrap: wrap; margin: -4px 0 8px; font-size: 12.5px; color: var(--muted);
+  span { display: inline-flex; align-items: center; gap: 6px; }
+}
+.sw { display: inline-block; width: 12px; height: 8px; border-radius: 2px; }
+.sw.split, .seg.split { background: var(--pine); }
+.sw.covered, .seg.covered { background: var(--gold); }
+.sw.rest { background: var(--paper-2); border: 1px solid var(--line-strong); }
+
+.wd {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  &:first-of-type { border-top: none; }
+}
+.wd-main { display: flex; align-items: center; gap: 14px; }
+.wd-date {
+  display: flex; flex-direction: column; align-items: center; width: 34px; flex-shrink: 0;
+  .d { font-family: var(--font-num); font-size: 18px; color: var(--ink); line-height: 1; }
+  .m { font-size: 11px; color: var(--muted); margin-top: 2px; }
+}
+.wd-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wd-amount { font-size: 16px; font-weight: 600; color: var(--ink); }
+.wd-sub { font-size: 12.5px; color: var(--muted); }
+
+.bar {
+  display: flex; gap: 2px; height: 8px; margin: 10px 0 6px; border-radius: 4px; overflow: hidden;
+  background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--line);
+  .seg { height: 100%; }
+  .seg:first-child { border-radius: 0 4px 4px 0; }
+}
+
+.wd-parts {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2);
+  .covered-text { color: var(--gold-dark); }
+  .rest-text { color: var(--muted); }
+  .done-text { color: var(--leaf-dark); display: inline-flex; align-items: center; gap: 2px; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+}
+
+.ghost-btn.small { height: 32px; padding: 0 10px; font-size: 13px; mat-icon { font-size: 17px; width: 17px; height: 17px; } }
+
+.editor {
+  margin-top: 10px; padding: 12px; border-radius: var(--radius-sm); background: var(--paper);
+  display: flex; flex-direction: column; gap: 8px;
+  .hint { margin: 0; font-size: 13px; color: var(--muted); }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cat { width: 190px; }
+  .amount { width: 100px; }
+  .note { flex: 1; min-width: 140px; }
+  .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .rest { font-size: 13px; color: var(--ink-2); &.bad { color: var(--brick); font-weight: 600; } }
+  .spacer { flex: 1; }
+}
+
+.exp {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line);
+  &:first-of-type { border-top: none; }
+  .exp-date { font-size: 13px; color: var(--muted); width: 42px; flex-shrink: 0; }
+  .exp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .exp-name { font-size: 14px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .exp-note { font-size: 12px; color: var(--muted); }
+  .exp-amount { font-weight: 600; color: var(--ink); white-space: nowrap; }
+}
+
+.how {
+  display: flex; gap: 8px; align-items: flex-start; max-width: 720px; margin: 4px 0 0;
+  font-size: 13px; color: var(--muted); line-height: 1.6;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--pine-soft); flex-shrink: 0; margin-top: 1px; }
+}
+
+@media (max-width: 600px) {
+  .summary .sum-side { gap: 18px; }
+  .exp .chip { display: none; }
+}

@@ -26,6 +26,9 @@ export class LoanDialogComponent {
   dueDate = '';
   remainingOverride: number | null = null;
   note = '';
+  /** הלוואה שנתתי: החזר חודשי צפוי — להתראה כשלא נרשם */
+  expectedMonthly: number | null = null;
+  expectedDay: number | null = null;
   saving = false;
 
   readonly direction: LoanDirection;
@@ -51,6 +54,8 @@ export class LoanDialogComponent {
       this.dueDate = l.dueDate ?? '';
       this.remainingOverride = l.remainingOverride;
       this.note = l.note ?? '';
+      this.expectedMonthly = l.expectedMonthly;
+      this.expectedDay = l.expectedDay;
     } else if (data.prefill) {
       this.counterparty = data.prefill.counterparty;
       this.amount = data.prefill.amount || null;
@@ -76,6 +81,8 @@ export class LoanDialogComponent {
       dueDate: this.dueDate || null,
       note: this.note || null,
       remainingOverride: this.given ? null : this.remainingOverride ?? null,
+      expectedMonthly: this.given && this.expectedMonthly ? this.expectedMonthly : null,
+      expectedDay: this.given && this.expectedMonthly && this.expectedDay ? this.expectedDay : null,
     };
     const req = this.editing
       ? this.loans.update(this.editing.id, input)

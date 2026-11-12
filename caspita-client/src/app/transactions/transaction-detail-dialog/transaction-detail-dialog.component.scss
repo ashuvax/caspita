@@ -194,3 +194,26 @@
   .split-rest { font-size: 13px; color: var(--ink-2); &.bad { color: var(--brick); font-weight: 600; } }
   .spacer { flex: 1; }
 }
+
+.rule-chip, .cash-link { text-decoration: none; cursor: pointer; }
+.cash-link { white-space: normal; }
+
+.tag-line {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+}
+.tag-add {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 8px; border-radius: 6px; font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line-strong);
+  line-height: 20px;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+  &:hover { color: var(--pine); border-color: var(--pine-soft); }
+  &:focus-visible { outline: 2px solid var(--pine); }
+}
+.tag-new {
+  padding: 6px 12px 8px;
+  input {
+    width: 100%; box-sizing: border-box; height: 32px; padding: 0 8px; border-radius: 7px;
+    border: 1px solid var(--line); font-family: var(--font-body); font-size: 14px;
+    &:focus { outline: none; border-color: var(--pine); }
+  }
+}

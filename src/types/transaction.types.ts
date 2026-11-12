@@ -55,7 +55,14 @@ export interface TransactionDto {
   /** האם נקבעה לעסקה הזו קטגוריה שונה מהספק */
   categoryOverridden: boolean;
   /** חלקים מהעסקה ששייכים לקטגוריות אחרות (סכומים חיוביים). השארית בקטגוריה של העסקה */
-  splits: { categoryId: number; amount: number }[];
+  splits: { categoryId: number; amount: number; note: string | null }[];
+  /** כלל הסיווג שקבע את הקטגוריה (אם כלל קבע) */
+  ruleId: number | null;
+  tagIds: number[];
+  /** משיכת מזומן מכספומט */
+  isCashWithdrawal: boolean;
+  /** כמה מהמשיכה כבר נרשם כהוצאות מזומן (לא נספר פעמיים) */
+  cashCovered: number;
   /** הקטגוריה שחברת האשראי נתנה (רמז) */
   sourceCategory: string | null;
 }

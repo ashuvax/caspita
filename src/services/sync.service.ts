@@ -4,6 +4,7 @@ import { BankConfig } from '../models/bank-config.model';
 import { Account } from '../models/account.model';
 import { TransactionRecord, type MaaserOverride } from '../models/transaction.model';
 import { TransactionSplit } from '../models/split.model';
+import { TransactionTag } from '../models/tag.model';
 import { installmentsService } from './installments.service';
 import { companyKind } from '../config/companies.config';
 import { addDays, localDateToDate, toLocalDate, today } from '../utils/dates';
@@ -138,6 +139,12 @@ async function saveAccount(config: BankConfig, scraped: TransactionsAccount, fro
     const key = pendingKeyById.get(s.transactionId)!;
     carriedSplits.set(key, [...(carriedSplits.get(key) ?? []), s]);
   }
+  const oldTags = oldPending.length ? await TransactionTag.findAll({ where: { transactionId: { [Op.in]: oldPending.map((p) => p.id) } } }) : [];
+  const carriedTags = new Map<string, TransactionTag[]>();
+  for (const l of oldTags) {
+    const key = pendingKeyById.get(l.transactionId)!;
+    carriedTags.set(key, [...(carriedTags.get(key) ?? []), l]);
+  }
   if (oldPending.length) await TransactionRecord.destroy({ where: { id: { [Op.in]: oldPending.map((p) => p.id) } } });
 
   const existing = await TransactionRecord.findAll({
@@ -161,11 +168,14 @@ async function saveAccount(config: BankConfig, scraped: TransactionsAccount, fro
       });
       for (const s of carriedSplits.get(key) ?? []) await s.update({ transactionId: created.id });
       carriedSplits.delete(key);
+      for (const l of carriedTags.get(key) ?? []) await l.update({ transactionId: created.id });
+      carriedTags.delete(key);
       added++;
     }
   }
   // פיצולים של עסקה ממתינה שנעלמה — נמחקים
   for (const list of carriedSplits.values()) for (const s of list) await s.destroy();
+  for (const list of carriedTags.values()) for (const l of list) await l.destroy();
   return added;
 }
 

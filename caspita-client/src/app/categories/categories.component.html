@@ -20,6 +20,80 @@
 </div>
 
 <ng-container *ngIf="!loading">
+  <section class="panel rules-panel">
+    <div class="rules-head">
+      <h3 class="panel-title"><mat-icon>rule</mat-icon>כללים</h3>
+      <span class="panel-sub">כשלאותו ספק יש כמה סוגי קניות — לפי טקסט, סכום או חשבון. כלל גובר על קטגוריית הספק</span>
+      <span class="spacer"></span>
+      <button class="ghost-btn" *ngIf="ruleEditing === null" (click)="newRule()"><mat-icon>add</mat-icon>כלל חדש</button>
+    </div>
+
+    <div class="rule-row" *ngFor="let r of rules">
+      <ng-container *ngIf="ruleEditing !== r.id">
+        <span class="rule-text">אם {{ describe(r) }}</span>
+        <mat-icon class="arrow">arrow_back</mat-icon>
+        <span class="chip chip-info">{{ categoryName(r.categoryId) }}</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="editRule(r)" matTooltip="עריכה"><mat-icon>edit</mat-icon></button>
+        <button class="icon-btn danger" (click)="deleteRule(r)" matTooltip="מחיקה"><mat-icon>delete_outline</mat-icon></button>
+      </ng-container>
+      <ng-container *ngIf="ruleEditing === r.id">
+        <ng-container *ngTemplateOutlet="ruleEditor"></ng-container>
+      </ng-container>
+    </div>
+    <ng-container *ngIf="ruleEditing === 0"><ng-container *ngTemplateOutlet="ruleEditor"></ng-container></ng-container>
+    <p class="panel-sub" *ngIf="!rules.length && ruleEditing === null">אין כללים. דוגמה: "התיאור מכיל ברייער · מ-300 ₪ ומעלה ← ביגוד".</p>
+  </section>
+
+  <ng-template #ruleEditor>
+    <div class="rule-editor">
+      <div class="sentence">
+        <span class="word">אם התיאור מכיל</span>
+        <mat-form-field appearance="outline" class="field-compact f-text">
+          <input matInput [(ngModel)]="rule.text" (ngModelChange)="ruleChanged()" placeholder="למשל: ברייער" />
+        </mat-form-field>
+        <span class="word">והסכום</span>
+        <mat-form-field appearance="outline" class="field-compact f-num">
+          <input matInput type="number" min="0" [(ngModel)]="rule.minAmount" (ngModelChange)="ruleChanged()" placeholder="מ-" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="field-compact f-num">
+          <input matInput type="number" min="0" [(ngModel)]="rule.maxAmount" (ngModelChange)="ruleChanged()" placeholder="עד" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="field-compact f-sel">
+          <mat-select [(ngModel)]="rule.direction" (ngModelChange)="ruleChanged()">
+            <mat-option value="expense">הוצאה</mat-option>
+            <mat-option value="income">הכנסה</mat-option>
+            <mat-option [value]="null">הוצאה או הכנסה</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="field-compact f-acc">
+          <mat-select [(ngModel)]="rule.accountId" (ngModelChange)="ruleChanged()" placeholder="מכל חשבון">
+            <mat-option [value]="null">מכל חשבון</mat-option>
+            <mat-option *ngFor="let a of accounts" [value]="a.id">{{ accountName(a.id) }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-icon class="arrow">arrow_back</mat-icon>
+        <mat-form-field appearance="outline" class="field-compact f-cat">
+          <mat-select [(ngModel)]="rule.categoryId" placeholder="קטגוריה">
+            <mat-option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <p class="preview" *ngIf="hasCondition()">
+        <ng-container *ngIf="preview && preview.count">
+          תופס {{ preview.count }} עסקאות מהשנה האחרונה ({{ -preview.total | number: '1.0-0' }} ₪), למשל:
+          <span *ngFor="let p of preview.samples; let last = last">{{ p.name }} {{ -p.amount | number: '1.0-0' }} ₪ ({{ p.date | date: 'dd/MM' }}){{ last ? '' : ', ' }}</span>
+        </ng-container>
+        <ng-container *ngIf="preview && !preview.count">לא תופס אף עסקה מהשנה האחרונה</ng-container>
+      </p>
+      <div class="rule-actions">
+        <span class="spacer"></span>
+        <button class="ghost-btn" (click)="ruleEditing = null">ביטול</button>
+        <button class="add-btn" (click)="saveRule()" [disabled]="!ruleValid() || ruleSaving">שמירה</button>
+      </div>
+    </div>
+  </ng-template>
+
   <div class="layout">
     <!-- ספקים -->
     <div class="panel merchants-panel">

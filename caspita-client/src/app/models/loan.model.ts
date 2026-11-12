@@ -27,6 +27,8 @@ export interface Loan {
   daysFromDue: number | null;
   monthlyPayment: number | null;
   autoMatch: boolean;
+  expectedMonthly: number | null;
+  expectedDay: number | null;
   entries: LoanEntry[];
 }
 
@@ -42,6 +44,8 @@ export interface LoanInput {
   principalTransactionId?: number | null;
   matchDescription?: string | null;
   matchAmount?: number | null;
+  expectedMonthly?: number | null;
+  expectedDay?: number | null;
 }
 
 export interface LoanCandidate {
