@@ -8,12 +8,12 @@ import { isSupportedCompany } from '../config/companies.config';
 import { CaspitaHapoalimScraper } from '../scrapers/hapoalim.scraper';
 import { banksService } from './banks.service';
 import { otpService } from './otp.service';
+import { PROFILES_DIR } from '../utils/paths';
+import { ensureChrome } from '../utils/chrome';
 
 /** SHOW_BROWSER=true ב-.env כדי לראות את הדפדפן בזמן שליפה (לדיבאג) */
 const SHOW_BROWSER = process.env.SHOW_BROWSER === 'true';
 const KEEP_OPEN_MS = Number(process.env.KEEP_OPEN_MS ?? 30_000);
-/** פרופיל דפדפן קבוע לכל חיבור — הבנקים זוכרים את המכשיר ולא מבקשים SMS בכל פעם */
-const PROFILES_DIR = path.join(process.cwd(), 'data', 'browser-profiles');
 
 function log(tag: string, ...args: unknown[]): void {
   console.log(`[${new Date().toISOString()}] [SCRAPER] [${tag}]`, ...args);
@@ -32,7 +32,9 @@ async function keepBrowserOpen(tag: string): Promise<void> {
 async function launchBrowser(config: BankConfig): Promise<Browser> {
   const userDataDir = path.join(PROFILES_DIR, `bank-${config.id}`);
   fs.mkdirSync(userDataDir, { recursive: true });
+  const executablePath = await ensureChrome();
   return puppeteer.launch({
+    executablePath,
     headless: !SHOW_BROWSER,
     userDataDir,
     args: ['--disable-blink-features=AutomationControlled', '--lang=he-IL'],

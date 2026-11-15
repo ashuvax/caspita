@@ -7,3 +7,5 @@ caspita-client/node_modules/
 data/
 .claude/
 *.db-journal
+build/
+release/

@@ -42,9 +42,10 @@ export class SyncService {
     return this.status$.value?.running ?? false;
   }
 
-  sync(): void {
+  /** בלי bankId — כל הספקים; עם bankId — רק הספק הזה */
+  sync(bankId?: number): void {
     if (this.running) return;
-    this.http.post<SyncStatus>('/sync', {}).subscribe({
+    this.http.post<SyncStatus>('/sync', bankId ? { bankId } : {}).subscribe({
       next: (status) => {
         this.status$.next(status);
         this.startPolling();

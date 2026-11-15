@@ -7,6 +7,7 @@ import { TransactionRecord } from '../models/transaction.model';
 import { RecurringItem } from '../models/recurring-item.model';
 import { companyKind } from '../config/companies.config';
 import { encrypt, decrypt } from '../utils/crypto';
+import { PROFILES_DIR } from '../utils/paths';
 
 export interface BankConfigDto {
   id: number;
@@ -62,7 +63,7 @@ async function remove(id: number): Promise<boolean> {
   await TransactionRecord.destroy({ where: { bankConfigId: id } });
   await Account.destroy({ where: { bankConfigId: id } });
   const deleted = await BankConfig.destroy({ where: { id } });
-  fs.rmSync(path.join(process.cwd(), 'data', 'browser-profiles', `bank-${id}`), { recursive: true, force: true });
+  fs.rmSync(path.join(PROFILES_DIR, `bank-${id}`), { recursive: true, force: true });
   return deleted > 0;
 }
 

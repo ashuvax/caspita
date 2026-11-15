@@ -3,6 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { today } from '../utils/dates';
+import { APP_ROOT } from '../utils/paths';
 
 export type AssistantEngine = 'claude' | 'codex';
 
@@ -24,7 +25,9 @@ export class AssistantError extends Error {}
 const TIMEOUT_MS = 4 * 60 * 1000;
 const PORT = Number(process.env.PORT || 3000);
 const API = `http://127.0.0.1:${PORT}/api`;
-const MCP_SERVER = path.join(process.cwd(), 'src', 'assistant', 'mcp-server.js');
+const MCP_SERVER = path.join(APP_ROOT, 'src', 'assistant', 'mcp-server.js');
+/** באפליקציית ווינדוס process.execPath הוא Caspita.exe — הדגל הזה מריץ אותו כ-Node רגיל */
+const MCP_ENV: Record<string, string> = { CASPITA_API: API, ...(process.versions.electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}) };
 /** תיקייה ריקה — כדי שהעוזר לא יטען את קבצי הפרויקט */
 const WORKDIR = path.join(os.tmpdir(), 'caspita-assistant');
 
@@ -52,7 +55,7 @@ function ensureWorkdir(): void {
 function writeMcpConfig(): string {
   ensureWorkdir();
   const file = path.join(WORKDIR, 'mcp.json');
-  const config = { mcpServers: { caspita: { type: 'stdio', command: process.execPath, args: [MCP_SERVER], env: { CASPITA_API: API } } } };
+  const config = { mcpServers: { caspita: { type: 'stdio', command: process.execPath, args: [MCP_SERVER], env: MCP_ENV } } };
   fs.writeFileSync(file, JSON.stringify(config, null, 2));
   return file;
 }
@@ -121,7 +124,7 @@ async function askCodex(question: string, history: AssistantTurn[]): Promise<str
     '-c', 'approval_policy="never"',
     '-c', `mcp_servers.caspita.command=${toml(process.execPath)}`,
     '-c', `mcp_servers.caspita.args=[${toml(MCP_SERVER)}]`,
-    '-c', `mcp_servers.caspita.env={ CASPITA_API = ${toml(API)} }`,
+    '-c', `mcp_servers.caspita.env={ ${Object.entries(MCP_ENV).map(([k, v]) => `${k} = ${toml(v)}`).join(', ')} }`,
     // רק הכלי הזה מאושר מראש — שאילתות קריאה בלבד
     '-c', 'mcp_servers.caspita.tools.query.approval_mode="approve"',
     '-',
