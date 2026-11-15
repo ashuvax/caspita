@@ -29,8 +29,10 @@ export async function getGrouped(req: Request, res: Response): Promise<void> {
 }
 
 /** מתחיל סנכרון ברקע ומחזיר מיד — הלקוח עוקב דרך /sync/status (סנכרון עם קוד SMS יכול לקחת דקות) */
-export function startSync(_req: Request, res: Response): void {
-  syncService.syncAll().catch((err) => console.error('[SYNC] נכשל:', err));
+export function startSync(req: Request, res: Response): void {
+  // bankId אופציונלי: סנכרון ספק אחד בלבד
+  const bankId = Number((req.body as { bankId?: unknown } | undefined)?.bankId);
+  syncService.syncAll(Number.isInteger(bankId) && bankId > 0 ? bankId : undefined).catch((err) => console.error('[SYNC] נכשל:', err));
   res.status(202).json(syncService.getStatus());
 }
 

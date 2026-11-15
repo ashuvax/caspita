@@ -10,6 +10,7 @@ import { maaserService } from './services/maaser.service';
 import { categoriesService } from './services/categories.service';
 import { IS_DEMO, DB_FILE } from './utils/db';
 import { seedDemo } from './demo/seed';
+import { APP_ROOT } from './utils/paths';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,7 +22,7 @@ app.use('/api', (_req, res) => {
 });
 app.use(errorHandler);
 
-const clientDist = path.join(process.cwd(), 'caspita-client', 'dist', 'caspita-client', 'browser');
+const clientDist = path.join(APP_ROOT, 'caspita-client', 'dist', 'caspita-client', 'browser');
 app.use(express.static(clientDist));
 app.use((_req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'));
@@ -42,5 +43,7 @@ async function bootstrap(): Promise<void> {
 
 bootstrap().catch((err) => {
   console.error('Failed to start:', err);
+  // באפליקציית ווינדוס המפעיל מציג את השגיאה בחלון
+  if (process.env.CASPITA_DESKTOP === 'true') throw err;
   process.exit(1);
 });

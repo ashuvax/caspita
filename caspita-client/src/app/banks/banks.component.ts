@@ -98,6 +98,14 @@ export class BanksComponent implements OnInit, OnDestroy {
     });
   }
 
+  get syncRunning(): boolean {
+    return this.sync.running;
+  }
+
+  syncOne(bank: BankConfig): void {
+    this.sync.sync(bank.id);
+  }
+
   deleteBank(bank: BankConfig): void {
     if (!confirm(`למחוק את "${bank.displayName}"?`)) return;
     this.banksService.delete(bank.id).pipe(takeUntil(this.destroy$)).subscribe({

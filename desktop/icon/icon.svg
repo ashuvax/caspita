@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#25594a"/>
+      <stop offset="1" stop-color="#163a2f"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <circle cx="128" cy="128" r="86" fill="none" stroke="#c08a1e" stroke-width="10"/>
+  <g fill="none" stroke="#ecd59f" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+    <!-- ₪: חצי שמאלי — עמוד שמאלי, קשת עליונה, יורד לאמצע -->
+    <path d="M78 176 V84 H124 Q144 84 144 104 V146"/>
+    <!-- חצי ימני — עמוד אמצעי, קשת תחתונה, עולה ימינה -->
+    <path d="M112 110 V172 H158 Q178 172 178 152 V80"/>
+  </g>
+</svg>

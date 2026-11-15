@@ -44,6 +44,26 @@
 
 ## התקנה
 
+### תוכנה לווינדוס
+
+קובץ ההתקנה `Caspita-Setup-x.y.z.exe` (כ־40MB) נמצא בדף [Releases](../../releases). לא צריך להתקין Node.js, ולא צריך הרשאות מנהל.
+
+- האפליקציה נפתחת בחלון משלה (חלון אפליקציה של Edge, שקיים בכל Windows 10/11). סגירת החלון עוצרת אותה.
+- Chrome לשליפה מהבנקים לא נארז בהתקנה: הוא יורד פעם אחת בסנכרון הראשון (כ־150MB).
+
+הנתונים נשמרים ב־`%APPDATA%\Caspita`, ולא נמחקים בהסרת התוכנה:
+- `caspita.db` — מסד הנתונים
+- `secret.key` — מפתח ההצפנה של פרטי ההתחברות. נוצר בהפעלה הראשונה. אם הוא נמחק, צריך להזין את פרטי ההתחברות לבנקים מחדש
+- `caspita.log` — לוג, לבירור תקלות סנכרון
+- `data\browser-profiles`, `chrome`, `window` — פרופילי הדפדפן, Chrome לשליפה, והחלון
+- `.env` — אופציונלי, למשל `SHOW_BROWSER=true`
+
+בלי חתימה דיגיטלית, ווינדוס יציג בהתקנה הראשונה אזהרה ("Windows protected your PC"). לוחצים "מידע נוסף" ואז "הפעל בכל זאת".
+
+**בנייה:** `npm run dist:win` → `release/Caspita-Setup-<version>.exe`. צריך NSIS (`makensis`); את המפעיל `Caspita.exe` מהדר `csc` שקיים בכל Windows. ה־CI (`.github/workflows/windows.yml`) בונה בכל push ל־main וב־PR ושומר את ההתקנה כ־artifact. תג `v*` (למשל `git tag v1.1.0 && git push origin v1.1.0`) יוצר גרסה עם קובץ ההתקנה. לחתימה: סודות `WINDOWS_CERT_PFX` (PFX ב־base64) ו־`WINDOWS_CERT_PASSWORD`.
+
+### מקוד המקור
+
 צריך Node.js.
 
 ```bash

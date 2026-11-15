@@ -213,9 +213,10 @@ async function runDemoSync(): Promise<SyncError[]> {
   return [];
 }
 
-async function runSync(): Promise<SyncError[]> {
+async function runSync(bankId?: number): Promise<SyncError[]> {
   if (IS_DEMO) return runDemoSync();
-  const configs = await BankConfig.findAll({ where: { isActive: true } });
+  const all = await BankConfig.findAll({ where: { isActive: true } });
+  const configs = bankId ? all.filter((c) => c.id === bankId) : all;
   status.running = true;
   status.startedAt = Date.now();
   status.finishedAt = null;
@@ -242,14 +243,14 @@ async function runSync(): Promise<SyncError[]> {
 }
 
 /** סנכרון כל הבנקים הפעילים. קריאה בזמן שסנכרון רץ מצטרפת לסנכרון הקיים */
-function syncAll(): Promise<SyncError[]> {
+function syncAll(bankId?: number): Promise<SyncError[]> {
   if (!current) {
     // מסמנים מיד, כדי שתשובת POST /sync כבר תראה שהסנכרון רץ
     status.running = true;
     status.startedAt = Date.now();
     status.finishedAt = null;
     status.banks = [];
-    current = runSync().finally(() => {
+    current = runSync(bankId).finally(() => {
       current = null;
     });
   }

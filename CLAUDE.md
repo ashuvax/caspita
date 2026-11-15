@@ -111,6 +111,10 @@ Used on both the banks page and transactions page. Inputs: `icon`, `iconGradient
 | `src/services/banks.service.ts` | CRUD for bank configs, credential encryption |
 | `caspita-client/src/app/shared/` | `ListRowComponent`, `SharedModule`, `MaterialModule` |
 
+## Windows App
+
+No Electron (keeps the installer ~40MB). `scripts/build-win.js` (`npm run dist:win`) stages `node.exe` + `dist` + client build + production `node_modules` (`npm ci --omit=dev`, pruned) and compiles `desktop/Caspita.cs` with the .NET Framework `csc` into a console-less `Caspita.exe`, then `desktop/installer.nsi` (NSIS, per-user, `%LOCALAPPDATA%\Programs\Caspita`). `Caspita.exe` runs `desktop/launcher.js`, which sets `CASPITA_DATA_DIR` (`%APPDATA%\Caspita` — DB, profiles, `secret.key` generated on first run, `caspita.log`), `CASPITA_APP_ROOT`, `PUPPETEER_CACHE_DIR` and port 3210, requires `dist/index.js`, and opens an Edge `--app` window with its own profile; when the last window closes the process exits. Chrome for scraping is not bundled: `ensureChrome()` (`src/utils/chrome.ts`) downloads puppeteer's pinned build on first use. Paths go through `src/utils/paths.ts` — never `process.cwd()` directly. Icon: `desktop/icon/*.svg` → `npm run icon` (also writes the client favicon). Optional signing via `WINDOWS_CERT_PFX`/`WINDOWS_CERT_PASSWORD` + signtool. CI: `.github/workflows/windows.yml` (artifact on main/PR, GitHub Release on `v*` tags). npm 11 blocks install scripts unless listed in `allowScripts` in package.json.
+
 ## Demo Mode
 
 `npm run demo` runs the server on port 3001 (`DEMO_PORT`) with a separate `caspita-demo.db` (`CASPITA_DB`), seeded with fake data by `src/demo/seed.ts` on first run. `npm run demo:reset` rebuilds it (dates are relative to today). In demo mode (`IS_DEMO` in `utils/db.ts`) sync is simulated — no scraping. Requires the client build (`npm run build:client`).

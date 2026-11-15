@@ -42,6 +42,9 @@
     [clickable]="false"
   >
     <div slot="actions" class="row-actions">
+      <button class="icon-btn" matTooltip="סנכרון רק של ספק זה" [disabled]="!bank.isActive || syncRunning" (click)="syncOne(bank)">
+        <mat-icon>sync</mat-icon>
+      </button>
       <button class="icon-btn" matTooltip="עריכה" (click)="openEditDialog(bank)">
         <mat-icon>edit</mat-icon>
       </button>
