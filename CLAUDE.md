@@ -81,7 +81,7 @@ SQLite + Sequelize `sync()` doesn't alter existing tables. New columns on existi
 Version 6.x is CommonJS — static imports (including deep `israeli-bank-scrapers/lib/...` paths) work fine.
 
 ### Hapoalim custom scraper
-`src/scrapers/hapoalim.scraper.ts` extends the library's `HapoalimScraper` because upstream (6.13.0) still lacks: SMS OTP handling (PR #1084) and the 150-row server cap (PR #1191). It overrides `login()` (OTP via `otpService` → UI dialog, 90s redirect wait) and `fetchData()` (splits date range when a page is full). Re-check upstream when upgrading; drop the subclass once those PRs are merged.
+`src/scrapers/hapoalim.scraper.ts` extends the library's `HapoalimScraper` because upstream (6.13.0) still lacks: SMS OTP handling (PR #1084) and the 150-row server cap (PR #1191). It overrides `login()` (OTP via `otpService` → UI dialog, 90s wait; in-page login errors are read from the DOM since the new portal doesn't change the URL on a wrong password; SMS/voice-call channel buttons are detected by text and the user picks one in the dialog → `POST /api/otp/send`) and `fetchData()` (splits date range when a page is full). Re-check upstream when upgrading; drop the subclass once those PRs are merged.
 
 The old Mercantile patch is no longer needed — upstream `discount.js` includes `retail2` since 6.7.8.
 

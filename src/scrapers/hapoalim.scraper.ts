@@ -4,6 +4,7 @@
  * הגרסה בספרייה (6.13.0) לא מטפלת בשני דברים שבורים כרגע מול הבנק:
  *  1. קוד SMS (OTP) בכניסה ממכשיר לא מוכר — הספרייה מחכה 20 שניות ונכשלת.
  *     כאן: מזהים את טופס ה-OTP, מבקשים קוד מהמשתמש דרך ה-UI ומקלידים אותו.
+ *     אם הבנק מציע גם שיחה קולית — המשתמש בוחר בדיאלוג, ולוחצים על הכפתור המתאים באתר.
  *     בנוסף הדפדפן רץ עם פרופיל קבוע (ראו scraper.service), כך שהבנק זוכר את המכשיר.
  *  2. השרת מחזיר לכל היותר 150 עסקאות לבקשה (החדשות ביותר) — עסקאות ישנות נעלמו בשקט.
  *     כאן: כשהתשובה מלאה, מפצלים את טווח התאריכים לחצאים עד שכל חלון נכנס בעמוד אחד.
@@ -12,9 +13,10 @@
  */
 import moment, { type Moment } from 'moment';
 import { randomUUID } from 'crypto';
-import { type Page } from 'puppeteer';
+import { type ElementHandle, type Page } from 'puppeteer';
 import HapoalimScraper from 'israeli-bank-scrapers/lib/scrapers/hapoalim';
 import { ScraperErrorTypes } from 'israeli-bank-scrapers/lib/scrapers/errors';
+import { type OtpChannel, type OtpOptions } from '../services/otp.service';
 import { type ScraperCredentials, type ScraperScrapingResult } from 'israeli-bank-scrapers/lib/scrapers/interface';
 import { fetchGetWithinPage, fetchPostWithinPage } from 'israeli-bank-scrapers/lib/helpers/fetch';
 import { waitUntil, sleep } from 'israeli-bank-scrapers/lib/helpers/waiting';
@@ -38,7 +40,30 @@ const SUCCESS_PATTERNS = ['/portalserver/HomePage', '/ng-portals-bt/rb/he/homepa
 const INVALID_PASSWORD_PATTERNS = ['errorcode=1.6'];
 const CHANGE_PASSWORD_PATTERNS = [/\/MCP\/START/i, /\/ABOUTTOEXPIRE\/START/i];
 
-export type OtpRetriever = (attempt: number) => Promise<string>;
+/** מקומות שבהם דף הכניסה מציג שגיאות (הפורטל החדש לא משנה כתובת בסיסמה שגויה) */
+const LOGIN_ERROR_SELECTOR = '[role="alert"], .error-message, .errors-rb, .login-error, .validation-error, [class*="error-msg"], [class*="errorMsg"]';
+
+type LoginOutcome =
+  | { kind: 'success' | 'change' | 'otp' | 'chooseChannel' }
+  | { kind: 'invalid'; message?: string }
+  | { kind: 'blocked' | 'bankError'; message: string }
+  | { kind: 'unknown'; message?: string };
+
+function classifyLoginError(message: string): LoginOutcome {
+  if (/חסו|נחסם|נעול|ננעל/.test(message)) return { kind: 'blocked', message };
+  if (/שגוי|אינם נכונ|לא נכונ|אינו נכון|לא תקינ|אינם תואמ|לא תואמ/.test(message)) return { kind: 'invalid', message };
+  return { kind: 'bankError', message };
+}
+
+export type OtpRetriever = (options: OtpOptions) => Promise<string>;
+
+/** אלמנטים שאפשר ללחוץ עליהם בדף — כפתורי/קישורי בחירת ערוץ לקוד */
+const CLICKABLE_SELECTOR = 'button, a, [role="button"], [role="radio"], input[type="radio"]';
+const CHANNEL_PATTERNS: Record<OtpChannel, RegExp> = {
+  voice: /שיחה|קולי|קולית|הקראה|טלפוני|voice|call/i,
+  sms: /sms|מסרון|הודעת טקסט|שלח(?:ו)? (?:שוב|מחדש)|שליחה חוזרת/i,
+};
+const CONFIRM_SEND_PATTERN = /^(?:שלח|שלחו|המשך|קבל(?:ת)? קוד|אישור)/;
 
 interface HapoalimCredentials {
   userCode: string;
@@ -133,27 +158,72 @@ export class CaspitaHapoalimScraper extends HapoalimScraper {
       { selector: '#password', value: credentials.password },
     ]);
     await this.page.click('.login-btn');
-
-    const initialUrl = await currentUrl(this.page).catch(() => '');
-    await waitUntil(
-      async () => {
-        try {
-          if ((await currentUrl(this.page)) !== initialUrl) return true;
-          return !!(await this.page.$(OTP_FORM_SELECTOR));
-        } catch {
-          // ההקשר נהרס בגלל ניווט — זו התקדמות
-          return true;
-        }
-      },
-      'ממתין להפניה או לטופס קוד SMS',
-      LOGIN_REDIRECT_TIMEOUT,
-      1000
-    );
+    // נותנים לדף רגע להגיב, כדי לא לתפוס הודעה ישנה שנשארה על המסך
+    await sleep(1500);
 
     // אם המשתמש מקליד בעצמו בדפדפן, או שיש מעבר ביניים — מחכים לתוצאה ברורה
     const outcome = await this.waitForLoginOutcome(LOGIN_REDIRECT_TIMEOUT);
-    if (outcome === 'otp') return this.handleOtp();
+    if (outcome.kind === 'otp') return this.handleOtp(false);
+    if (outcome.kind === 'chooseChannel') return this.handleOtp(true);
     return this.resultFromOutcome(outcome);
+  }
+
+  /** טקסט נראה של אלמנט לחיץ (כולל label של radio), או null אם הוא מוסתר */
+  private async clickableText(el: ElementHandle<Element>): Promise<string | null> {
+    return el.evaluate((node) => {
+      const h = node as HTMLElement;
+      let text = h.innerText || h.getAttribute('aria-label') || h.getAttribute('title') || '';
+      let visible = h.getClientRects().length > 0;
+      if (h instanceof HTMLInputElement) {
+        // רדיו מעוצב בדרך כלל מוסתר, והטקסט נמצא ב-label שלו
+        const label = ((h.id && document.querySelector(`label[for="${CSS.escape(h.id)}"]`)) || h.closest('label')) as HTMLElement | null;
+        text = label?.innerText || text;
+        visible = visible || !!label?.getClientRects().length;
+      }
+      if (!visible) return null;
+      text = text.replace(/\s+/g, ' ').trim();
+      return text.length > 0 && text.length <= 80 ? text : null;
+    });
+  }
+
+  /** ערוצים שהבנק מציע כרגע בדף (SMS / שיחה קולית) */
+  private async otpChannels(): Promise<OtpChannel[]> {
+    const found = new Set<OtpChannel>();
+    for (const el of await this.page.$$(CLICKABLE_SELECTOR)) {
+      const text = await this.clickableText(el).catch(() => null);
+      if (!text) continue;
+      if (CHANNEL_PATTERNS.voice.test(text)) found.add('voice');
+      else if (CHANNEL_PATTERNS.sms.test(text)) found.add('sms');
+    }
+    return (['sms', 'voice'] as const).filter((c) => found.has(c));
+  }
+
+  /** לוחץ באתר הבנק על "שלח ב-SMS" / "קבל בשיחה קולית" */
+  private async sendOtpVia(channel: OtpChannel): Promise<boolean> {
+    for (const el of await this.page.$$(CLICKABLE_SELECTOR)) {
+      const text = await this.clickableText(el).catch(() => null);
+      if (!text || !CHANNEL_PATTERNS[channel].test(text)) continue;
+      if (channel === 'sms' && CHANNEL_PATTERNS.voice.test(text)) continue;
+      // רדיו מוסתר: לוחצים דרך ה-DOM (ה-label מעביר את הבחירה)
+      await el.click().catch(() => el.evaluate((n) => (n as HTMLElement).click()));
+      // בחירה ברדיו — צריך עוד לחיצה על "שלח"/"המשך"
+      const isChoice = await el.evaluate(
+        (n) => (n instanceof HTMLInputElement && n.type === 'radio') || n.getAttribute('role') === 'radio'
+      );
+      if (isChoice) {
+        await sleep(300);
+        for (const btn of await this.page.$$('button, [role="button"], input[type="submit"]')) {
+          const t = await this.clickableText(btn).catch(() => null);
+          if (t && CONFIRM_SEND_PATTERN.test(t) && !CHANNEL_PATTERNS.voice.test(t)) {
+            await btn.click();
+            break;
+          }
+        }
+      }
+      console.log(`[SCRAPER] [בנק הפועלים] קוד אימות נשלח: ${channel === 'voice' ? 'שיחה קולית' : 'SMS'} ("${text}")`);
+      return true;
+    }
+    return false;
   }
 
   private async isLoggedIn(): Promise<boolean> {
@@ -161,16 +231,37 @@ export class CaspitaHapoalimScraper extends HapoalimScraper {
     return SUCCESS_PATTERNS.some((p) => url.includes(p));
   }
 
-  private async waitForLoginOutcome(timeout: number): Promise<'success' | 'invalid' | 'change' | 'otp' | 'unknown'> {
+  /** הודעת שגיאה שהבנק מציג בדף הכניסה (סיסמה שגויה, משתמש חסום...) — בלי שינוי כתובת */
+  private async loginPageError(): Promise<string | null> {
+    return this.page.evaluate((selector) => {
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>(selector))) {
+        if (!el.getClientRects().length) continue;
+        const text = (el.innerText || '').replace(/\s+/g, ' ').trim();
+        if (text.length >= 4 && text.length <= 300 && /[֐-׿]/.test(text)) return text;
+      }
+      return null;
+    }, LOGIN_ERROR_SELECTOR);
+  }
+
+  private async waitForLoginOutcome(timeout: number): Promise<LoginOutcome> {
+    let lastError: string | null = null;
     try {
       return await waitUntil(
         async () => {
           try {
             const url = await currentUrl(this.page);
-            if (SUCCESS_PATTERNS.some((p) => url.includes(p))) return 'success' as const;
-            if (INVALID_PASSWORD_PATTERNS.some((p) => url.includes(p))) return 'invalid' as const;
-            if (CHANGE_PASSWORD_PATTERNS.some((p) => p.test(url))) return 'change' as const;
-            if (await this.page.$(OTP_FORM_SELECTOR)) return 'otp' as const;
+            if (SUCCESS_PATTERNS.some((p) => url.includes(p))) return { kind: 'success' } as const;
+            if (INVALID_PASSWORD_PATTERNS.some((p) => url.includes(p))) return { kind: 'invalid' } as const;
+            if (CHANGE_PASSWORD_PATTERNS.some((p) => p.test(url))) return { kind: 'change' } as const;
+            if (await this.page.$(OTP_FORM_SELECTOR)) return { kind: 'otp' } as const;
+            // מסך "לאן לשלוח את הקוד?" לפני טופס הקוד: טופס הכניסה נעלם ויש אפשרות שיחה קולית
+            if (!(await this.page.$('#userCode')) && (await this.otpChannels()).includes('voice')) return { kind: 'chooseChannel' } as const;
+            const message = await this.loginPageError();
+            if (message) {
+              // אותה הודעה פעמיים ברציפות — זו לא הודעה חולפת בזמן טעינה
+              if (message === lastError) return classifyLoginError(message);
+              lastError = message;
+            }
             return false;
           } catch {
             return false;
@@ -181,34 +272,59 @@ export class CaspitaHapoalimScraper extends HapoalimScraper {
         1000
       );
     } catch {
-      return 'unknown';
+      return { kind: 'unknown', message: lastError ?? undefined };
     }
   }
 
-  private resultFromOutcome(outcome: 'success' | 'invalid' | 'change' | 'otp' | 'unknown'): ScraperScrapingResult {
-    switch (outcome) {
+  private resultFromOutcome(outcome: LoginOutcome): ScraperScrapingResult {
+    switch (outcome.kind) {
       case 'success':
         return { success: true };
       case 'invalid':
-        return { success: false, errorType: ScraperErrorTypes.InvalidPassword, errorMessage: 'קוד משתמש או סיסמה שגויים' };
+        return { success: false, errorType: ScraperErrorTypes.InvalidPassword, errorMessage: outcome.message ? `הבנק: ${outcome.message}` : 'קוד משתמש או סיסמה שגויים' };
+      case 'blocked':
+        return { success: false, errorType: ScraperErrorTypes.AccountBlocked, errorMessage: `הבנק: ${outcome.message}` };
       case 'change':
         return { success: false, errorType: ScraperErrorTypes.ChangePassword, errorMessage: 'הבנק דורש להחליף סיסמה — יש להיכנס לאתר הבנק ולהחליף' };
-      default:
-        return { success: false, errorType: ScraperErrorTypes.General, errorMessage: 'ההתחברות לבנק הפועלים לא הושלמה בזמן' };
+      case 'bankError':
+        return { success: false, errorType: ScraperErrorTypes.General, errorMessage: `הבנק: ${outcome.message}` };
+      case 'otp':
+      case 'chooseChannel':
+      case 'unknown':
+        return {
+          success: false,
+          errorType: ScraperErrorTypes.Timeout,
+          errorMessage: outcome.kind === 'unknown' && outcome.message
+            ? `ההתחברות לא הושלמה. הבנק הציג: ${outcome.message}`
+            : 'הבנק לא אישר את הכניסה תוך 90 שניות. ייתכן שקוד המשתמש או הסיסמה שגויים — כדאי לנסות להיכנס איתם לאתר הבנק',
+        };
     }
   }
 
-  private async handleOtp(): Promise<ScraperScrapingResult> {
+  private async handleOtp(needsChannel: boolean): Promise<ScraperScrapingResult> {
     if (!this.otpRetriever) {
       return {
         success: false,
         errorType: ScraperErrorTypes.TwoFactorRetrieverMissing,
-        errorMessage: 'הבנק ביקש קוד SMS ואין דרך לקבל אותו',
+        errorMessage: 'הבנק ביקש קוד אימות ואין דרך לקבל אותו',
       };
     }
 
     for (let attempt = 1; attempt <= MAX_OTP_ATTEMPTS; attempt++) {
-      const code = (await this.otpRetriever(attempt)).replace(/\D/g, '');
+      const channels = await this.otpChannels().catch((): OtpChannel[] => []);
+      const code = (
+        await this.otpRetriever({
+          attempt,
+          channels,
+          needsChannel: needsChannel && attempt === 1,
+          sendVia: (channel) => this.sendOtpVia(channel),
+        })
+      ).replace(/\D/g, '');
+      // אחרי בחירת ערוץ הטופס נטען רק עכשיו
+      const form = await this.page.waitForSelector(OTP_FORM_SELECTOR, { timeout: 20_000 }).catch(() => null);
+      if (!form) {
+        return { success: false, errorType: ScraperErrorTypes.General, errorMessage: 'טופס קוד האימות לא הופיע באתר הבנק' };
+      }
       const inputs = await this.page.$$(`${OTP_FORM_SELECTOR} input[type="text"], ${OTP_FORM_SELECTOR} input[type="tel"]`);
 
       if (inputs.length === 1) {
@@ -250,7 +366,7 @@ export class CaspitaHapoalimScraper extends HapoalimScraper {
 
       if (otpResult === 'gone') {
         const outcome = await this.waitForLoginOutcome(30_000);
-        if (outcome === 'otp') continue;
+        if (outcome.kind === 'otp' || outcome.kind === 'chooseChannel') continue;
         return this.resultFromOutcome(outcome);
       }
     }
@@ -258,7 +374,7 @@ export class CaspitaHapoalimScraper extends HapoalimScraper {
     return {
       success: false,
       errorType: ScraperErrorTypes.General,
-      errorMessage: `קוד ה-SMS נדחה ${MAX_OTP_ATTEMPTS} פעמים`,
+      errorMessage: `קוד האימות נדחה ${MAX_OTP_ATTEMPTS} פעמים`,
     };
   }
 

@@ -87,7 +87,7 @@ export class SyncService {
       this.otpDialogOpen = true;
       this.zone.run(() => {
         const ref = this.dialog.open(OtpDialogComponent, {
-          data: { bankName: otp.bankName ?? '', attempt: otp.attempt ?? 1 },
+          data: { id: otp.id, bankName: otp.bankName ?? '', attempt: otp.attempt ?? 1, channels: otp.channels ?? [], needsChannel: !!otp.needsChannel },
           disableClose: true,
           width: '380px',
         });
