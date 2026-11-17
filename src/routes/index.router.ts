@@ -62,6 +62,7 @@ router.get('/sync/status', finance.getSyncStatus);
 router.get('/otp/status', finance.getOtpStatus);
 router.post('/otp/submit', finance.submitOtp);
 router.post('/otp/cancel', finance.cancelOtp);
+router.post('/otp/send', finance.sendOtpVia);
 
 router.get('/maaser/summary', finance.getMaaserSummary);
 router.put('/maaser/settings', finance.updateMaaserSettings);

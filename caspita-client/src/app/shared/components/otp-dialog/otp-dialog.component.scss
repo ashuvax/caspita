@@ -28,6 +28,62 @@
   .otp-field { width: 100%; }
 }
 
+.otp-channels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.otp-channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  mat-icon { color: var(--pine); }
+  &:hover:not(:disabled) { border-color: var(--pine); background: var(--pine-tint); }
+  &:disabled { opacity: 0.6; cursor: wait; }
+}
+
+.otp-resend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: -6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.otp-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--pine);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  &:disabled { opacity: 0.6; cursor: wait; }
+}
+
+.otp-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--gold-dark);
+}
+
 .otp-actions {
   display: flex;
   justify-content: flex-end;

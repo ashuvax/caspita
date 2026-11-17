@@ -1,31 +1,55 @@
 <div class="otp-header">
   <div class="otp-icon">
-    <mat-icon>sms</mat-icon>
+    <mat-icon>{{ icon }}</mat-icon>
   </div>
   <div class="otp-title-block">
     <h2>אימות דו-שלבי</h2>
-    <p>{{ data.bankName }} שלח קוד SMS לטלפון שלך</p>
+    <p>{{ message }}</p>
     <p *ngIf="data.attempt > 1" class="otp-retry">הקוד הקודם נדחה — נסיון {{ data.attempt }} מתוך 3</p>
   </div>
 </div>
 
 <mat-dialog-content class="otp-body">
-  <mat-form-field appearance="outline" class="otp-field">
-    <mat-label>קוד אימות</mat-label>
-    <input
-      matInput
-      [(ngModel)]="code"
-      type="text"
-      inputmode="numeric"
-      maxlength="8"
-      placeholder="הזן את הקוד שקיבלת"
-      (keydown.enter)="submit()"
-      autofocus
-    />
-  </mat-form-field>
+  <div *ngIf="choosing" class="otp-channels">
+    <button
+      *ngFor="let channel of data.channels"
+      type="button"
+      class="otp-channel"
+      [disabled]="!!sending"
+      (click)="send(channel)"
+    >
+      <mat-icon>{{ channel === 'voice' ? 'phone_in_talk' : 'sms' }}</mat-icon>
+      <span>{{ sending === channel ? 'שולח...' : labels[channel] }}</span>
+    </button>
+  </div>
+
+  <ng-container *ngIf="!choosing">
+    <mat-form-field appearance="outline" class="otp-field">
+      <mat-label>קוד אימות</mat-label>
+      <input
+        matInput
+        [(ngModel)]="code"
+        type="text"
+        inputmode="numeric"
+        maxlength="8"
+        placeholder="הזן את הקוד שקיבלת"
+        (keydown.enter)="submit()"
+        autofocus
+      />
+    </mat-form-field>
+
+    <div *ngIf="otherChannels.length" class="otp-resend">
+      <span>הקוד לא הגיע?</span>
+      <button *ngFor="let channel of otherChannels" type="button" class="otp-link" [disabled]="!!sending" (click)="send(channel)">
+        {{ sending === channel ? 'שולח...' : channel === 'voice' ? 'קבל אותו בשיחה קולית' : 'שלח שוב ב-SMS' }}
+      </button>
+    </div>
+  </ng-container>
+
+  <p *ngIf="sendFailed" class="otp-error">לא נמצאה באתר הבנק אפשרות לשלוח כך את הקוד. נסה את האפשרות השנייה.</p>
 </mat-dialog-content>
 
 <mat-dialog-actions class="otp-actions">
   <button class="btn-cancel" (click)="cancel()">ביטול</button>
-  <button class="btn-submit" (click)="submit()" [disabled]="!code.trim()">אשר</button>
+  <button *ngIf="!choosing" class="btn-submit" (click)="submit()" [disabled]="!code.trim()">אשר</button>
 </mat-dialog-actions>

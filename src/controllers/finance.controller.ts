@@ -60,6 +60,12 @@ export function submitOtp(req: Request, res: Response): void {
   res.json({ ok: otpService.submitOtp(code.trim(), id) });
 }
 
+export async function sendOtpVia(req: Request, res: Response): Promise<void> {
+  const { channel, id } = req.body as { channel?: string; id?: number };
+  if (channel !== 'sms' && channel !== 'voice') throw badRequest('ערוץ שליחה לא תקין');
+  res.json({ ok: await otpService.sendVia(channel, id) });
+}
+
 export function cancelOtp(req: Request, res: Response): void {
   const { id } = req.body as { id?: number };
   otpService.cancel(id);

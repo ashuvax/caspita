@@ -89,7 +89,7 @@ async function scrapeBank(config: BankConfig, startDate: Date): Promise<Transact
   try {
     if (companyId === CompanyTypes.hapoalim) {
       const scraper = new CaspitaHapoalimScraper(options);
-      scraper.setOtpRetriever((attempt) => otpService.waitForOtp(config.displayName, attempt));
+      scraper.setOtpRetriever((options) => otpService.waitForOtp(config.displayName, options));
       result = await scraper.scrape({ userCode: credentials.userCode ?? '', password: credentials.password ?? '' });
     } else {
       const scraper = createScraper(options);
