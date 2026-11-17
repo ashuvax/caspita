@@ -1,6 +1,7 @@
 # בונה את תוכנת ההתקנה לווינדוס (Caspita-Setup-x.y.z.exe, כ-40MB).
-# כל push ל-main ו-PR: בנייה + קובץ ההתקנה כ-artifact להורדה מדף הריצה.
-# תג v* (למשל v1.2.0): בנוסף נוצרת גרסה (Release) ב-GitHub עם קובץ ההתקנה.
+# כל PR: בנייה + קובץ ההתקנה כ-artifact להורדה מדף הריצה (בדיקה לפני מיזוג).
+# תג v* (למשל v1.2.0): בנייה + גרסה (Release) ב-GitHub עם קובץ ההתקנה.
+# אין בנייה על push ל-main — ה-PR כבר בנה את אותו קוד. בנייה ידנית: Run workflow.
 #
 # חתימה דיגיטלית (אופציונלי): סודות WINDOWS_CERT_PFX (קובץ PFX ב-base64) ו-WINDOWS_CERT_PASSWORD.
 # בלי הסודות — הבנייה עוברת בלי חתימה.
@@ -8,7 +9,6 @@ name: Windows
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
   pull_request:
   workflow_dispatch:
