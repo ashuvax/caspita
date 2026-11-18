@@ -8,6 +8,7 @@ import { RecurringItem } from '../models/recurring-item.model';
 import { companyKind } from '../config/companies.config';
 import { encrypt, decrypt } from '../utils/crypto';
 import { PROFILES_DIR } from '../utils/paths';
+import { diagnosticsService } from './diagnostics.service';
 
 export interface BankConfigDto {
   id: number;
@@ -18,6 +19,8 @@ export interface BankConfigDto {
   createdAt: Date;
   lastSyncAt: Date | null;
   lastSyncError: string | null;
+  /** יש דוח תקלה מהסנכרון האחרון שנכשל */
+  hasReport: boolean;
 }
 
 async function getAll(): Promise<BankConfigDto[]> {
@@ -81,6 +84,7 @@ function toDto(config: BankConfig): BankConfigDto {
     createdAt: config.createdAt,
     lastSyncAt: config.lastSyncAt ?? null,
     lastSyncError: config.lastSyncError ?? null,
+    hasReport: !!config.lastSyncError && diagnosticsService.hasReport(config.id),
   };
 }
 

@@ -8,6 +8,7 @@ import { isSupportedCompany } from '../config/companies.config';
 import { CaspitaHapoalimScraper } from '../scrapers/hapoalim.scraper';
 import { banksService } from './banks.service';
 import { otpService } from './otp.service';
+import { diagnosticsService } from './diagnostics.service';
 import { PROFILES_DIR } from '../utils/paths';
 import { ensureChrome } from '../utils/chrome';
 
@@ -68,8 +69,15 @@ async function scrapeBank(config: BankConfig, startDate: Date): Promise<Transact
   const companyId = config.companyId;
   const credentials = banksService.getDecryptedCredentials(config);
   log(config.displayName, `מתחיל שליפה | companyId=${companyId} | מתאריך ${startDate.toISOString().slice(0, 10)}`);
+  const trace = diagnosticsService.start(config.id, companyId, config.displayName, startDate);
 
-  const browser = await launchBrowser(config);
+  let browser: Browser;
+  try {
+    browser = await launchBrowser(config);
+  } catch (err) {
+    diagnosticsService.finish(trace, { success: false, shownMessage: 'הפעלת הדפדפן נכשלה', error: err });
+    throw err;
+  }
   const options: ScraperOptions = {
     companyId,
     startDate,
@@ -78,7 +86,10 @@ async function scrapeBank(config: BankConfig, startDate: Date): Promise<Transact
     combineInstallments: false,
     futureMonthsToScrape: 2,
     defaultTimeout: 60_000,
+    // הספרייה מצלמת את הדף לפני שהיא סוגרת אותו בכשל — נכנס לדוח התקלה
+    storeFailureScreenShotPath: diagnosticsService.screenshotPath(config.id),
     preparePage: async (page: Page) => {
+      diagnosticsService.watchPage(trace, page);
       page.on('framenavigated', (frame) => {
         if (frame === page.mainFrame()) log(config.displayName, `[NAV] ${frame.url()}`);
       });
@@ -101,6 +112,7 @@ async function scrapeBank(config: BankConfig, startDate: Date): Promise<Transact
     }
   } catch (err) {
     logError(config.displayName, 'חריגה בזמן שליפה:', err);
+    diagnosticsService.finish(trace, { success: false, shownMessage: err instanceof Error ? err.message : String(err), error: err });
     await keepBrowserOpen(config.displayName);
     await browser.close().catch(() => undefined);
     throw err instanceof Error ? err : new Error(String(err));
@@ -113,10 +125,13 @@ async function scrapeBank(config: BankConfig, startDate: Date): Promise<Transact
   });
 
   if (!result.success) {
+    const shownMessage = describeError(result);
+    diagnosticsService.finish(trace, { success: false, errorType: result.errorType, errorMessage: result.errorMessage, shownMessage });
     await keepBrowserOpen(config.displayName);
     await browser.close().catch(() => undefined);
-    throw new Error(describeError(result));
+    throw new Error(shownMessage);
   }
+  diagnosticsService.finish(trace, { success: true });
   return result.accounts ?? [];
 }
 

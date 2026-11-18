@@ -22,6 +22,8 @@ export interface BankConfig {
   createdAt: string;
   lastSyncAt: string | null;
   lastSyncError: string | null;
+  /** יש דוח תקלה מהסנכרון האחרון שנכשל */
+  hasReport?: boolean;
 }
 
 export interface Account {

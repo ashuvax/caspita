@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { getSupportedCompanies, getAllBanks, createBank, updateBank, deleteBank } from '../controllers/banks.controller';
+import { getSupportedCompanies, getAllBanks, createBank, updateBank, deleteBank, getBankReport } from '../controllers/banks.controller';
 import * as finance from '../controllers/finance.controller';
 import * as features from '../controllers/features.controller';
 
@@ -10,6 +10,7 @@ router.get('/banks', getAllBanks);
 router.post('/banks', createBank);
 router.put('/banks/:id', updateBank);
 router.delete('/banks/:id', deleteBank);
+router.get('/banks/:id/report', getBankReport);
 
 router.get('/accounts', finance.getAccounts);
 router.put('/accounts/:id', finance.updateAccount);
