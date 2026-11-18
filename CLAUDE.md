@@ -68,6 +68,9 @@ Run `npm run build` + `npm run build:client` then `npm start` — the backend se
 - **Alerts** also include: given loans with `expectedMonthly`/`expectedDay` behind schedule (7-day grace, cumulative since start), duplicate charges (same account/day/amount/description, ≥100₪), a charge ≥2.5× the merchant's median and above its previous max (donations excluded), a first ≥400₪ charge from an unknown merchant on a card, and a new bank fee
 - **Forecast** (`forecast.service.ts`): per bank account — balance + upcoming card charges (card txns by `processedDate`) + active recurring items not yet seen this month → timeline, min balance, overdraft warning
 
+### Failure reports
+`diagnostics.service.ts`: every scrape records a trace (navigations, HTTP ≥400, JSON responses with an error field, console errors; long query values masked) and the library's `storeFailureScreenShotPath` screenshot into `DATA_DIR/diagnostics/bank-<id>.{json,png}`. Kept only for failed syncs. `GET /api/banks/:id/report` builds one self-contained HTML file (embedded screenshot + related `caspita.log` lines) that the user downloads from the banks page (`hasReport` on the DTO) and sends manually — nothing is uploaded automatically.
+
 ### Bank Config Storage
 Bank credentials are stored in SQLite (`bank_configs` table) encrypted with **AES-256-GCM** via `src/utils/crypto.ts`. The encryption key is derived from `SECRET_KEY` env var (falls back to a dev default). Credentials are never sent to the frontend. Partial credential updates are merged with existing ones.
 

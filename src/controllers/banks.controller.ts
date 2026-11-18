@@ -1,6 +1,7 @@
 import { type Request, type Response } from 'express';
 import { SUPPORTED_COMPANIES, getCompany } from '../config/companies.config';
 import { banksService } from '../services/banks.service';
+import { diagnosticsService } from '../services/diagnostics.service';
 import { badRequest, notFound, parseId } from '../utils/http';
 
 interface BankBody {
@@ -54,4 +55,13 @@ export async function deleteBank(req: Request, res: Response): Promise<void> {
   const ok = await banksService.remove(parseId(req.params.id));
   if (!ok) throw notFound('הבנק לא נמצא');
   res.status(204).end();
+}
+
+/** דוח תקלה של הסנכרון האחרון שנכשל — קובץ HTML להורדה */
+export function getBankReport(req: Request, res: Response): void {
+  const report = diagnosticsService.buildReport(parseId(req.params.id));
+  if (!report) throw notFound('אין דוח תקלה לספק זה — הוא נוצר כשסנכרון נכשל');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${report.fileName}"`);
+  res.send(report.html);
 }

@@ -387,6 +387,7 @@ div.mat-mdc-select-panel {
   &:hover:not(:disabled) { border-color: var(--pine); color: var(--pine); background: var(--pine-tint); }
   &:disabled { opacity: .4; cursor: default; }
   &.danger:hover { background: var(--brick-tint); border-color: var(--brick); color: var(--brick); }
+  &.warn { color: var(--gold-dark); border-color: var(--gold-soft); background: var(--gold-tint); text-decoration: none; }
 }
 
 /* ── פאנלים וטבלאות ─────────────────────────── */
