@@ -182,9 +182,12 @@ async function saveAccount(config: BankConfig, scraped: TransactionsAccount, fro
 async function syncBank(config: BankConfig, entry: SyncStatus['banks'][number]): Promise<void> {
   entry.state = 'running';
   const now = today();
-  const fromDate = config.syncedFrom ? addDays(now, -OVERLAP_DAYS) : addDays(now, -FULL_HISTORY_DAYS);
+  const requestedFrom = config.syncedFrom ? addDays(now, -OVERLAP_DAYS) : addDays(now, -FULL_HISTORY_DAYS);
   try {
-    const accounts = await scraperService.scrapeBank(config, localDateToDate(fromDate));
+    // הבנק יכול להחזיר טווח קצר מהמבוקש (ראו scraperService) — שומרים לפי מה שנשלף בפועל
+    const scraped = await scraperService.scrapeBank(config, localDateToDate(requestedFrom));
+    const accounts = scraped.accounts;
+    const fromDate = toLocalDate(scraped.startDate);
     let added = 0;
     for (const acc of accounts) added += await saveAccount(config, acc, fromDate);
     const syncedFrom = config.syncedFrom && config.syncedFrom < fromDate ? config.syncedFrom : fromDate;

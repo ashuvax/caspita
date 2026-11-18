@@ -3,6 +3,7 @@ import fs from 'fs';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { createScraper, CompanyTypes, type ScraperCredentials, type ScraperOptions, type ScraperScrapingResult } from 'israeli-bank-scrapers';
 import { type TransactionsAccount } from 'israeli-bank-scrapers/lib/transactions';
+import { ScraperErrorTypes } from 'israeli-bank-scrapers/lib/scrapers/errors';
 import { BankConfig } from '../models/bank-config.model';
 import { isSupportedCompany } from '../config/companies.config';
 import { CaspitaHapoalimScraper } from '../scrapers/hapoalim.scraper';
@@ -62,7 +63,10 @@ export interface ScrapedBank {
   accounts: TransactionsAccount[];
 }
 
-async function scrapeBank(config: BankConfig, startDate: Date): Promise<TransactionsAccount[]> {
+/** שגיאה מהשרת של הבנק אחרי הכניסה — לא סיסמה/חסימה/זמן — שאולי תעבור עם טווח קצר יותר */
+class BankServerError extends Error {}
+
+async function scrapeOnce(config: BankConfig, startDate: Date): Promise<TransactionsAccount[]> {
   if (!isSupportedCompany(config.companyId)) {
     throw new Error(`חברה לא נתמכת: ${config.companyId}`);
   }
@@ -129,10 +133,34 @@ async function scrapeBank(config: BankConfig, startDate: Date): Promise<Transact
     diagnosticsService.finish(trace, { success: false, errorType: result.errorType, errorMessage: result.errorMessage, shownMessage });
     await keepBrowserOpen(config.displayName);
     await browser.close().catch(() => undefined);
-    throw new Error(shownMessage);
+    throw result.errorType === ScraperErrorTypes.Generic ? new BankServerError(shownMessage) : new Error(shownMessage);
   }
   diagnosticsService.finish(trace, { success: true });
   return result.accounts ?? [];
+}
+
+/**
+ * דיסקונט ומרכנתיל (אותה מערכת) מחזירים לפעמים SYSTEM_ERROR (T101010, "אין אפשרות לבצע את הפעולה")
+ * על שליפת עסקאות של שנה — למשל בחשבון שנפתח לפני פחות משנה. במקרה כזה מנסים שוב עם טווח קצר יותר.
+ */
+const SHORTER_RANGE_COMPANIES: string[] = [CompanyTypes.discount, CompanyTypes.mercantile];
+const FALLBACK_DAYS = [180, 90, 30];
+
+async function scrapeBank(config: BankConfig, startDate: Date): Promise<{ accounts: TransactionsAccount[]; startDate: Date }> {
+  const fallbacks = SHORTER_RANGE_COMPANIES.includes(config.companyId)
+    ? FALLBACK_DAYS.map((days) => new Date(Date.now() - days * 86_400_000)).filter((d) => d > startDate)
+    : [];
+  let from = startDate;
+  for (;;) {
+    try {
+      return { accounts: await scrapeOnce(config, from), startDate: from };
+    } catch (err) {
+      const next = fallbacks.shift();
+      if (!(err instanceof BankServerError) || !next) throw err;
+      log(config.displayName, `הבנק החזיר שגיאה על הטווח מ-${from.toISOString().slice(0, 10)} — מנסה שוב מ-${next.toISOString().slice(0, 10)}`);
+      from = next;
+    }
+  }
 }
 
 export const scraperService = { scrapeBank };
